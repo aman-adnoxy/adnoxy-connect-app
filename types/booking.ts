@@ -1,8 +1,9 @@
-// 📦 BookingRequest
-export interface BookingRequest {
+export type BookingRequest = {
   id: string;
-  user_id: string;     // FK → users.id
-  status: 'pending' | 'completed' | 'confirmed' | 'cancelled';
-  created_at: Date;
-  total_price: string;
-}
+  user_id: string;
+  status: 'completed' | 'pending' | 'confirmed' | 'cancelled';
+  total_price: number;
+  start_date: string;
+  end_date: string;
+  created_at: string;
+};

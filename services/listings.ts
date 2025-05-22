@@ -101,5 +101,26 @@ export const listingsService = {
       console.error('Error fetching user listings:', error);
       throw error;
     }
+  },
+
+  async getListingsLocationsAndPrices(city?: string): Promise<Listing[]> {
+    try {
+      let query = supabase
+        .from('listings')
+        .select('*'); // Select all fields to get full Listing objects
+
+      if (city) {
+        query = query.ilike('city', `%${city}%`); // Filter by city if provided
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      // Data should now conform to Listing[] directly
+      return data as Listing[];
+    } catch (error) {
+      console.error('Error fetching listing locations and prices:', error);
+      throw error;
+    }
   }
-}; 
+};

@@ -1,3 +1,5 @@
+import 'react-native-get-random-values'; // Polyfill for crypto.getRandomValues
+
 // Polyfills for Node environment
 if (typeof window === 'undefined') {
   global.window = {
@@ -11,4 +13,4 @@ if (typeof window === 'undefined') {
   global.navigator = {
     userAgent: 'node',
   };
-} 
+}

@@ -413,15 +413,16 @@ export default function ListingDetailsScreen() {
         listing_id: listing.id,
         start_date: selectedDate,
         end_date: endDate,
-        added_at: new Date().toISOString()
+        added_at: new Date().toISOString(),
+        notes: ''
       });
       Alert.alert('Success', 'Added to cart!');
     }
   };
 
   const handleLocationPress = () => {
-    if (listing?.location) {
-      const url = `https://www.google.com/maps/search/?api=1&query=${listing.location}`;
+    if (listing?.latitude && listing?.longitude) {
+      const url = `https://www.google.com/maps/search/?api=1&query=${listing.latitude},${listing.longitude}`;
       Linking.openURL(url).catch((err) => {
         console.error('Error opening maps:', err);
         Alert.alert('Error', 'Could not open maps');
@@ -430,8 +431,8 @@ export default function ListingDetailsScreen() {
   };
 
   const handleStreetViewPress = () => {
-    if (listing?.location) {
-      const url = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${listing.location}`;
+    if (listing?.latitude && listing?.longitude) {
+      const url = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${listing.latitude},${listing.longitude}`;
       Linking.openURL(url).catch((err) => {
         console.error('Error opening street view:', err);
         Alert.alert('Error', 'Could not open Street View');
@@ -669,7 +670,7 @@ export default function ListingDetailsScreen() {
             disabled={isInCart}
           >
             <Ionicons 
-              name={isInCart ? "checkmark-circle-outline" : "cart-outline"} 
+              name={isInCart ? "checkmark-circle-outline" : "add-circle-outline"} 
               size={20} 
               color={isInCart ? "#666" : "#fff"} 
               style={styles.buttonIcon} 

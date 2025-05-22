@@ -16,6 +16,8 @@ export const bookingsService = {
         user_id: booking.user_id,
         status: booking.status,
         total_price: booking.total_price,
+        start_date: booking.start_date,
+        end_date: booking.end_date,
         created_at: booking.created_at
       }));
     } catch (error) {
@@ -38,6 +40,8 @@ export const bookingsService = {
         user_id: booking.user_id,
         status: booking.status,
         total_price: booking.total_price,
+        start_date: booking.start_date,
+        end_date: booking.end_date,
         created_at: booking.created_at
       }));
     } catch (error) {
@@ -64,6 +68,8 @@ export const bookingsService = {
         user_id: data.user_id,
         status: data.status,
         total_price: data.total_price,
+        start_date: data.start_date,
+        end_date: data.end_date,
         created_at: data.created_at
       };
     } catch (error) {
@@ -91,6 +97,8 @@ export const bookingsService = {
         user_id: data.user_id,
         status: data.status,
         total_price: data.total_price,
+        start_date: data.start_date,
+        end_date: data.end_date,
         created_at: data.created_at
       };
     } catch (error) {

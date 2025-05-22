@@ -12,13 +12,14 @@
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "esModuleInterop": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler", // Changed from "node" to "bundler"
     "baseUrl": ".",
     "paths": {
       "@/*": [
         "./*"
       ]
-    }
+    },
+    "types": ["jest-expo"] // Explicitly include types, preventing implicit 'node'
   },
   "include": [
     "**/*.ts",

@@ -9,6 +9,7 @@ import { listingsService } from '@/services/listings';
 import { Listing } from '@/types/listing';
 import { CartButton } from '@/components/CartButton';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router'; // Import router
 
 
 function SearchBar({ onSearch, isDark }: { onSearch: (text: string) => void, isDark: boolean }) {
@@ -149,6 +150,20 @@ export default function HomeScreen() {
           showsVerticalScrollIndicator={false}
         />
       )}
+      <Pressable
+        onPress={() => router.push('/map')}
+        style={({ pressed }) => [
+          styles.floatingMapButton,
+          { opacity: pressed ? 0.7 : 1 },
+        ]}
+      >
+        <Ionicons
+          name="map-outline" // Using map-marker for a solid map icon
+          size={20}
+          color="#000"
+        />
+        <Text style={styles.floatingMapButtonText}>Map</Text>
+      </Pressable>
     </View>
   );
 }
@@ -251,5 +266,27 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 32,
+  },
+  floatingMapButton: {
+    position: 'absolute',
+    backgroundColor: '#fff',
+    bottom: 20,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 8,
+  },
+  floatingMapButtonText: {
+    color: '#000',
+    marginLeft: 8,
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });

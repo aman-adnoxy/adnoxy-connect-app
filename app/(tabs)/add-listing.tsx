@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { StyleSheet, ScrollView, TextInput, Pressable, Image, View as RNView, Alert, ActivityIndicator, SafeAreaView, TouchableOpacity, Platform } from 'react-native';
+import { StyleSheet, ScrollView, TextInput, Pressable, Image, View as RNView, Alert, ActivityIndicator, SafeAreaView, TouchableOpacity } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
@@ -7,13 +7,12 @@ import { Typography } from '@/constants/Typography';
 import { router } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as ImagePicker from 'expo-image-picker';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { listingsService } from '@/services/listings';
 import { Listing } from '@/types/listing';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/services/supabase';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
+import CustomPlacesSearch from '@/components/CustomPlacesSearch';
 import { MapView, Marker, PROVIDER_GOOGLE } from '../../components/MapView';
 import * as Location from 'expo-location';
 
@@ -117,9 +116,7 @@ export default function AddListingScreen() {
   };
 
   useEffect(() => {
-    if (Platform.OS !== 'web') {
-      getCurrentLocation();
-    }
+    getCurrentLocation();
   }, []);
 
   const handleMarkerDragEnd = (e: { nativeEvent: { coordinate: { latitude: number; longitude: number } } }) => {
@@ -160,7 +157,10 @@ export default function AddListingScreen() {
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const newImage = result.assets[0].uri;
-        setImages(prevImages => [...prevImages, newImage]);
+        setImages(prevImages => {
+          const currentImages = prevImages || [];
+          return [...currentImages, newImage];
+        });
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to pick image');
@@ -168,11 +168,14 @@ export default function AddListingScreen() {
   };
 
   const handleRemoveImage = (index: number) => {
-    setImages(prevImages => prevImages.filter((_, i) => i !== index));
+    setImages(prevImages => {
+      const currentImages = prevImages || [];
+      return currentImages.filter((_, i) => i !== index);
+    });
   };
 
   const handleSubmit = async () => {
-    if (!title || !description || !price || !category || !address || !city || images.length === 0) {
+    if (!title || !description || !price || !category || !address || !city || !images || images.length === 0) {
       Alert.alert('Error', 'Please fill in all fields and add at least one image');
       return;
     }
@@ -223,9 +226,10 @@ export default function AddListingScreen() {
   };
 
   const renderImageTile = (uri?: string, index?: number) => {
+    const currentImages = images || [];
     const isPlaceholder = !uri;
-    const isLast = index === images.length;
-    const showAddButton = isPlaceholder && isLast && images.length < MAX_IMAGES;
+    const isLast = index === currentImages.length;
+    const showAddButton = isPlaceholder && isLast && currentImages.length < MAX_IMAGES;
 
     return (
       <RNView 
@@ -283,45 +287,30 @@ export default function AddListingScreen() {
         </View>
 
         <View style={styles.mapContainer}>
-          <GooglePlacesAutocomplete
-            placeholder="Search location"
-            onPress={handlePlaceSelect}
-            query={{
-              key: 'AIzaSyDBu0mE3-x_rXqwjf1eUej7-7YDjhvbMPs',
-              language: 'en',
-            }}
-            styles={{
-              container: styles.searchContainer,
-              textInput: [styles.searchInput, isDark && styles.darkSearchInput],
-            }}
+          <CustomPlacesSearch
+            onPlaceSelected={handlePlaceSelect}
+            googlePlacesApiKey="AIzaSyDBu0mE3-x_rXqwjf1eUej7-7YDjhvbMPs"
+            initialRegion={region}
           />
-          {Platform.OS !== 'web' ? (
-            <MapView
-              ref={mapRef}
-              style={styles.map}
-              provider={PROVIDER_GOOGLE}
-              initialRegion={region}
-              onRegionChangeComplete={setRegion}
-              onMapReady={() => setIsMapReady(true)}
-            >
-              {isMapReady && (
-                <Marker
-                  coordinate={{
-                    latitude: region.latitude,
-                    longitude: region.longitude,
-                  }}
-                  draggable
-                  onDragEnd={handleMarkerDragEnd}
-                />
-              )}
-            </MapView>
-          ) : (
-            <View style={[styles.map, styles.webMapPlaceholder]}>
-              <Text style={styles.webMapText}>
-                Map view is not available on web. Please use the search bar to select a location.
-              </Text>
-            </View>
-          )}
+          <MapView
+            ref={mapRef}
+            style={styles.map}
+            provider={PROVIDER_GOOGLE}
+            initialRegion={region}
+            onRegionChangeComplete={setRegion}
+            onMapReady={() => setIsMapReady(true)}
+          >
+            {isMapReady && (
+              <Marker
+                coordinate={{
+                  latitude: region.latitude,
+                  longitude: region.longitude,
+                }}
+                draggable
+                onDragEnd={handleMarkerDragEnd}
+              />
+            )}
+          </MapView>
           <TouchableOpacity
             style={[styles.currentLocationButton, { backgroundColor: tintColor }]}
             onPress={getCurrentLocation}
@@ -378,8 +367,8 @@ export default function AddListingScreen() {
                 </RNView>
               )}
               <View style={styles.gridRow}>
-                {images.map((uri, index) => renderImageTile(uri, index))}
-                {images.length < MAX_IMAGES && renderImageTile(undefined, images.length)}
+                {(images || []).map((uri, index) => renderImageTile(uri, index))}
+                {(images || []).length < MAX_IMAGES && renderImageTile(undefined, (images || []).length)}
               </View>
             </View>
           </View>

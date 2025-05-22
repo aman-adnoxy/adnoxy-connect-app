@@ -4,6 +4,7 @@ export interface CartItem {
   start_date: Date;
   end_date: Date;
   added_at: string;
+  notes: string;
 }
 
 export type Cart = CartItem[];
