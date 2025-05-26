@@ -28,9 +28,9 @@ export default function CustomPlacesSearch({ onPlaceSelected, googlePlacesApiKey
       return;
     }
     try {
-      let url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?key=${googlePlacesApiKey}&input=${text}&types=geocode&language=en&components=country:in`;
+      let url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?key=${googlePlacesApiKey}&input=${text}&language=en&components=country:in`; // Removed &types=geocode
       
-      if (initialRegion) {
+      if (initialRegion) { // Add types=establishment if needed for specific business search
         url += `&location=${initialRegion.latitude},${initialRegion.longitude}&radius=50000`;
       }
 

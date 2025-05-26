@@ -127,6 +127,7 @@ function RootLayoutNav() {
           title: 'Listing Details',
           headerBackTitle: 'Back',
         }} />
+        <Stack.Screen name="map" options={{ headerShown: false }} />
       </Stack>
     </ThemeProvider>
   );

@@ -1,17 +1,18 @@
-import { StyleSheet, View, SafeAreaView, Alert, Image, Animated, Easing } from 'react-native'; // Import Image, Animated, Easing
+import { StyleSheet, View, SafeAreaView, Alert, Image, Animated, Easing } from 'react-native';
 import { Text } from '@/components/Themed';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
-import { MapView, Marker, PROVIDER_GOOGLE } from '../components/MapView'; // Import MapView and Marker
-import PriceMarker from '@/components/PriceMarker'; // Import PriceMarker
-import { Callout } from 'react-native-maps'; // Import Callout directly from react-native-maps
+import { MapView, Marker, PROVIDER_GOOGLE } from '../components/MapView';
+import PriceMarker from '@/components/PriceMarker';
+import { Callout } from 'react-native-maps';
 import { useState, useRef, useEffect } from 'react';
 import * as Location from 'expo-location';
 import { TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { router } from 'expo-router';
-import { listingsService } from '@/services/listings'; // Import listingsService
-import { Listing } from '@/types/listing'; // Import Listing type
+import { router, useLocalSearchParams } from 'expo-router'; // Import useLocalSearchParams
+import { listingsService } from '@/services/listings';
+import { Listing } from '@/types/listing';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 
 interface Region {
   latitude: number;
@@ -39,21 +40,21 @@ interface GooglePlaceDetail {
 }
 
 export default function MapScreen() {
+  const { latitude, longitude, title } = useLocalSearchParams(); // Get parameters
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const tintColor = Colors[colorScheme ?? 'light'].tint;
   const mapRef = useRef<any>(null);
   const [isMapReady, setIsMapReady] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState<{latitude: number; longitude: number} | null>(null);
-  const [mapListings, setMapListings] = useState<Array<Listing>>([]); // State for listings on map
-  const [selectedListing, setSelectedListing] = useState<Listing | null>(null); // State for selected listing
-  const animation = useRef(new Animated.Value(0)).current; // For floating window animation
+  const [mapListings, setMapListings] = useState<Array<Listing>>([]);
+  const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
+  const animation = useRef(new Animated.Value(0)).current;
 
   const [region, setRegion] = useState<Region>({
-    latitude: 23.0225, // Ahmedabad latitude
-    longitude: 72.5714, // Ahmedabad longitude
-    latitudeDelta: 0.03, // Increased zoom (slightly less zoom than 0.02, but might be perceived as better initial view)
-    longitudeDelta: 0.03, // Increased zoom
+    latitude: 23.0225,
+    longitude: 72.5714,
+    latitudeDelta: 0.024, // 20% increased zoom
+    longitudeDelta: 0.024, // 20% increased zoom
   });
 
   const getCurrentLocation = async () => {
@@ -69,21 +70,16 @@ export default function MapScreen() {
       });
 
       const { latitude, longitude } = location.coords;
-      setRegion({
+      const newRegion = {
         latitude,
         longitude,
         latitudeDelta: 0.0922,
         longitudeDelta: 0.0421,
-      });
-      setSelectedLocation({ latitude, longitude });
+      };
+      setRegion(newRegion);
 
       if (mapRef.current) {
-        mapRef.current.animateToRegion({
-          latitude,
-          longitude,
-          latitudeDelta: 0.0922,
-          longitudeDelta: 0.0421,
-        }, 1000);
+        mapRef.current.animateToRegion(newRegion, 1000);
       }
     } catch (error) {
       console.error('Error getting location:', error);
@@ -91,27 +87,9 @@ export default function MapScreen() {
   };
 
   useEffect(() => {
-    // Animate to Ahmedabad initially
-    const initialRegion = {
-      latitude: 23.0225,
-      longitude: 72.5714,
-      latitudeDelta: 0.02,
-      longitudeDelta: 0.02,
-    };
-
-    if (mapRef.current) {
-      mapRef.current.animateToRegion(initialRegion, 1000);
-    }
-    // Removed getCurrentLocation() call from here as per user feedback.
-  }, []);
-
-  useEffect(() => {
     const fetchMapListings = async () => {
       try {
-        // For now, fetch all listings. If we want to filter by visible map region,
-        // we'd need to pass current map bounds to the service function.
-        // For "Ahmedabad, Gujarat only", we can pass 'Ahmedabad' as city.
-        const listings = await listingsService.getListingsLocationsAndPrices('Ahmedabad'); // Fetch listings for Ahmedabad
+        const listings = await listingsService.getListingsLocationsAndPrices('Ahmedabad');
         setMapListings(listings);
       } catch (error) {
         console.error('Failed to fetch map listings:', error);
@@ -119,7 +97,7 @@ export default function MapScreen() {
     };
 
     fetchMapListings();
-  }, []); // Empty dependency array to fetch once on mount, or add region to refetch on map move
+  }, []);
 
   const handlePlaceSelect = (data: GooglePlaceData, details: GooglePlaceDetail | null) => {
     try {
@@ -136,29 +114,10 @@ export default function MapScreen() {
         longitudeDelta: 0.0421,
       };
 
-      // Update state in sequence to prevent race conditions
-      setSelectedLocation({ latitude: lat, longitude: lng });
       setRegion(newRegion);
-      
-      // Use setTimeout to ensure state updates are complete before animating
-      setTimeout(() => {
-        if (mapRef.current) {
-          mapRef.current.animateToRegion(newRegion, 1000);
-        }
-      }, 100);
     } catch (error) {
       console.error('Error handling place selection:', error);
     }
-  };
-
-  const handleLongPress = (e: { nativeEvent: { coordinate: { latitude: number; longitude: number } } }) => {
-    const { latitude, longitude } = e.nativeEvent.coordinate;
-    setSelectedLocation({ latitude, longitude });
-    setRegion({
-      ...region,
-      latitude,
-      longitude,
-    });
   };
 
   useEffect(() => {
@@ -182,8 +141,14 @@ export default function MapScreen() {
   return (
     <SafeAreaView style={[styles.container, isDark && styles.darkContainer]}>
       <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <Ionicons name="arrow-back" size={24} color={isDark ? '#fff' : '#000'} />
+        </TouchableOpacity>
         <Text style={[styles.headerText, isDark && styles.darkHeaderText]}>
-          Explore Listings
+          {title || 'Map View'}
         </Text>
       </View>
 
@@ -203,27 +168,15 @@ export default function MapScreen() {
           initialRegion={region}
           onRegionChangeComplete={setRegion}
           onMapReady={() => setIsMapReady(true)}
-          onLongPress={handleLongPress}
         >
-          {/* {isMapReady && selectedLocation && (
-            <Marker
-              coordinate={selectedLocation}
-              draggable
-              onDragEnd={(e) => setSelectedLocation(e.nativeEvent.coordinate)}
-              pinColor="blue" // Mark current location with a blue dot
-            />
-          )} */}
-          {mapListings.map((listing) => (
+          {isMapReady && mapListings.length > 0 && mapListings.map((listing) => (
             <Marker
               key={listing.id}
               coordinate={{ latitude: listing.latitude, longitude: listing.longitude }}
               onPress={() => setSelectedListing(listing)} // Set selected listing on marker press
               zIndex={selectedListing?.id === listing.id ? 2 : 1} // Bring selected marker to front
             >
-              <PriceMarker
-                price={listing.price}
-                isSelected={selectedListing?.id === listing.id}
-              />
+              <Ionicons name="location" size={40} color="#000000" />
             </Marker>
           ))}
         </MapView>
@@ -251,12 +204,32 @@ export default function MapScreen() {
               },
             ]}
           >
-            <Image source={{ uri: selectedListing.image_urls[0] }} style={styles.listingImage} />
-            <View style={styles.listingInfo}>
-              <Text style={[styles.listingTitle, isDark && styles.darkListingTitle]}>{selectedListing.title}</Text>
-              <Text style={[styles.listingPrice, isDark && styles.darkListingPrice]}>₹{selectedListing.price}</Text>
-              <Text style={[styles.listingCity, isDark && styles.darkListingCity]}>{selectedListing.city}</Text>
-            </View>
+            <TouchableOpacity 
+              onPress={() => router.push(`/listing/${selectedListing.id}`)} 
+              style={styles.listingCardContent} // Apply flex to this TouchableOpacity
+            >
+              <Image source={{ uri: selectedListing.image_urls[0] }} style={styles.listingImage} />
+              <View style={styles.listingInfo}>
+                <Text style={[styles.listingTitle, isDark && styles.darkListingTitle]}>{selectedListing.title} ({selectedListing.quantity})</Text>
+                <Text style={[styles.listingPrice, isDark && styles.darkListingPrice]}>₹{selectedListing.price}/month</Text>
+                {selectedListing.address && (
+                  <Text style={[styles.listingAddress, isDark && styles.darkListingAddress]}>
+                    {selectedListing.address}
+                  </Text>
+                )}
+                {selectedListing.landmark && (
+                  <Text style={[styles.listingLandmark, isDark && styles.darkListingLandmark]}>
+                    Landmark: {selectedListing.landmark}
+                  </Text>
+                )}
+                {selectedListing.height && selectedListing.width && selectedListing.unit && (
+                  <Text style={[styles.listingSize, isDark && styles.darkListingSize]}>
+                    Size: {selectedListing.height}x{selectedListing.width} {selectedListing.unit}
+                  </Text>
+                )}
+                {/* <Text style={[styles.listingCity, isDark && styles.darkListingCity]}>{selectedListing.city}</Text> */}
+              </View>
+            </TouchableOpacity>
             <TouchableOpacity onPress={() => setSelectedListing(null)} style={styles.closeButton}>
               <Ionicons name="close-circle" size={24} color={isDark ? '#999' : '#666'} />
             </TouchableOpacity>
@@ -272,10 +245,20 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
+  backButton: {
+    position: 'absolute',
+    left: 16,
+    top: 16,
+    zIndex: 1,
+    padding: 8,
+  },
   darkContainer: {
     backgroundColor: '#1a1a1a',
   },
   header: {
+    flexDirection: 'row', // Enable flexbox
+    alignItems: 'center', // Center items vertically
+    justifyContent: 'center', // Center items horizontally
     padding: 16,
     backgroundColor: 'transparent',
   },
@@ -283,7 +266,8 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '600',
     color: '#000',
-    textAlign: 'center',
+    // textAlign: 'center', // Remove this as flexbox will handle centering
+    flex: 1, // Allow text to take available space and push back button
   },
   darkHeaderText: {
     color: '#fff',
@@ -298,9 +282,11 @@ const styles = StyleSheet.create({
   searchContainer: {
     position: 'absolute',
     top: 10,
-    left: 10,
-    right: 10,
+    left: 0,
+    right: 0,
     zIndex: 1,
+    alignItems: 'center', // Center content horizontally
+    paddingHorizontal: 20, // Keep padding for spacing
   },
   searchInputWrapper: {
     flexDirection: 'row',
@@ -321,7 +307,6 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    height: '100%',
     fontSize: 16,
     color: '#000', // Default text color
     textAlign: 'center', // Center the text
@@ -389,6 +374,30 @@ const styles = StyleSheet.create({
   darkListingPrice: {
     color: '#fff',
   },
+  listingAddress: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 2,
+  },
+  darkListingAddress: {
+    color: '#ccc',
+  },
+  listingLandmark: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 2,
+  },
+  darkListingLandmark: {
+    color: '#ccc',
+  },
+  listingSize: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 2,
+  },
+  darkListingSize: {
+    color: '#ccc',
+  },
   listingCity: {
     fontSize: 14,
     color: '#666',
@@ -399,5 +408,10 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     padding: 5,
+  },
+  listingCardContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 });

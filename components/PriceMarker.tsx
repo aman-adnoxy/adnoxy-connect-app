@@ -13,18 +13,26 @@ const PriceMarker: React.FC<PriceMarkerProps> = ({ price, isSelected }) => {
   const isDark = colorScheme === 'dark';
 
   return (
-    <View style={[
-      styles.priceMarker,
-      isSelected && styles.selectedPriceMarker,
-      isDark && styles.darkPriceMarker, // Apply dark mode styles if needed
-    ]}>
-      <Text style={[
-        styles.priceMarkerText,
-        isSelected && styles.selectedPriceMarkerText,
-        isDark && styles.darkPriceMarkerText, // Apply dark mode styles if needed
+    <View style={{ alignItems: 'center' }}>
+      <View style={[
+        styles.priceMarker,
+        isSelected && styles.selectedPriceMarker,
+        isDark && styles.darkPriceMarker,
       ]}>
-        ₹{price}
-      </Text>
+        <Text style={[
+          styles.priceMarkerText,
+          isSelected && styles.selectedPriceMarkerText,
+          isDark && styles.darkPriceMarkerText,
+        ]}>
+          ₹{price}
+        </Text>
+      </View>
+      {/* Triangle pointer */}
+      <View style={[
+        styles.triangle,
+        isSelected && styles.selectedTriangle,
+        isDark && styles.darkTriangle,
+      ]} />
     </View>
   );
 };
@@ -33,8 +41,9 @@ const styles = StyleSheet.create({
   priceMarker: {
     backgroundColor: '#fff',
     borderRadius: 20,
-    paddingVertical: 10,
+    paddingVertical: 8,
     paddingHorizontal: 18,
+    minWidth: 60,
     borderColor: '#ccc',
     borderWidth: 1,
     shadowColor: '#000',
@@ -56,15 +65,33 @@ const styles = StyleSheet.create({
   priceMarkerText: {
     color: '#000',
     fontWeight: 'bold',
-    fontSize: 14,
+    fontSize: 15,
     textAlign: 'center',
-    flexWrap: 'wrap',
   },
   darkPriceMarkerText: {
     color: '#fff',
   },
   selectedPriceMarkerText: {
-    color: '#fff', // Text color when selected
+    color: '#fff',
+  },
+  triangle: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 10,
+    borderRightWidth: 10,
+    borderTopWidth: 10,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: '#fff',
+    alignSelf: 'center',
+    marginTop: -1,
+    borderStyle: 'solid',
+  },
+  darkTriangle: {
+    borderTopColor: '#2a2a2a',
+  },
+  selectedTriangle: {
+    borderTopColor: Colors.light.tint,
   },
 });
 

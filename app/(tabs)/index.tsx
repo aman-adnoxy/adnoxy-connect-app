@@ -1,4 +1,4 @@
-import { StyleSheet, FlatList, TextInput, View as RNView, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { StyleSheet, FlatList, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { useState, useCallback, useEffect } from 'react';
 import { Text, View } from '@/components/Themed';
 import Colors from '@/constants/Colors';
@@ -9,22 +9,9 @@ import { listingsService } from '@/services/listings';
 import { Listing } from '@/types/listing';
 import { CartButton } from '@/components/CartButton';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router'; // Import router
-
-
-function SearchBar({ onSearch, isDark }: { onSearch: (text: string) => void, isDark: boolean }) {
-  return (
-    <RNView style={[styles.searchContainer, isDark && styles.darkSearchContainer]}>
-      <FontAwesome name="search" size={16} color={isDark ? '#999' : '#666'} style={styles.searchIcon} />
-      <TextInput
-        style={[styles.searchInput, isDark && styles.darkSearchInput]}
-        placeholder="Search listings..."
-        placeholderTextColor={isDark ? '#666' : '#999'}
-        onChangeText={onSearch}
-      />
-    </RNView>
-  );
-} 
+import { router } from 'expo-router'; // Removed useLocalSearchParams
+import { Picker } from '@react-native-picker/picker';
+import * as Location from 'expo-location';
 
 function FilterChips({ onFilter, isDark, selectedCategory }: { onFilter: (category: string) => void, isDark: boolean, selectedCategory: string }) {
   const categories = ['All', 'Billboard', 'LED Display', 'Banner'];
@@ -70,23 +57,81 @@ function FilterChips({ onFilter, isDark, selectedCategory }: { onFilter: (catego
   );
 }
 
+interface CityPickerProps {
+  selectedCity: string;
+  onCityChange: (city: string) => void;
+  isDark: boolean;
+}
+
+const CityPicker: React.FC<CityPickerProps> = ({ selectedCity, onCityChange, isDark }) => {
+  const cities = ['Ahmedabad', 'Mumbai', 'Delhi', 'Bangalore', 'Chennai', 'Kolkata', 'Surat', 'Pune', 'Hyderabad', 'Jaipur']; // Example cities
+
+  return (
+    <View style={[styles.cityPickerContainer, isDark && styles.darkCityPickerContainer]}>
+      <Ionicons name="location-outline" size={18} color={isDark ? '#fff' : '#000'} style={styles.cityPickerIcon} />
+      <Text style={[styles.cityPickerText, isDark && styles.darkCityPickerText]}>
+        {selectedCity || 'Select your city'}
+      </Text>
+      <Ionicons name="chevron-down" size={18} color={isDark ? '#fff' : '#000'} style={styles.cityPickerIcon} />
+      <Picker
+        selectedValue={selectedCity}
+        onValueChange={(itemValue: string) => onCityChange(itemValue)}
+        style={[styles.cityPicker, isDark && styles.darkCityPicker]}
+      >
+        <Picker.Item label="Select City" value="" />
+        {cities.map((c) => (
+          <Picker.Item key={c} label={c} value={c} />
+        ))}
+      </Picker>
+    </View>
+  );
+};
+
+
 export default function HomeScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const isDark = colorScheme === 'dark';
   const tintColor = Colors[colorScheme].tint;
-  const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedCity, setSelectedCity] = useState('');
+
+  useEffect(() => {
+    (async () => {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        console.log('Permission to access location was denied');
+        setSelectedCity('Ahmedabad'); // Default city if permission denied
+        return;
+      }
+
+      let location = await Location.getCurrentPositionAsync({});
+      const geocode = await Location.reverseGeocodeAsync(location.coords);
+      if (geocode && geocode.length > 0 && geocode[0].city) {
+        setSelectedCity(geocode[0].city);
+      } else {
+        setSelectedCity('Ahmedabad'); // Default city if geocoding fails
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     loadListings();
-  }, []);
+  }, [selectedCategory, selectedCity]);
 
   const loadListings = async () => {
     try {
       setLoading(true);
-      const filters = selectedCategory !== 'All' ? { category: selectedCategory } : undefined;
+      const filters: { category?: string; city?: string } = {};
+
+      if (selectedCategory !== 'All') {
+        filters.category = selectedCategory;
+      }
+      if (selectedCity) {
+        filters.city = selectedCity;
+      }
+
       const data = await listingsService.getListings(filters);
       setListings(data);
     } catch (error) {
@@ -96,21 +141,6 @@ export default function HomeScreen() {
     }
   };
 
-  useEffect(() => {
-    loadListings();
-  }, [selectedCategory]);
-
-  const filteredListings = listings.filter(listing => {
-    const matchesSearch = listing.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         listing.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === 'All' || listing.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
-
-  const handleSearch = useCallback((text: string) => {
-    setSearchQuery(text);
-  }, []);
-
   const handleFilter = useCallback((category: string) => {
     setSelectedCategory(category);
   }, []);
@@ -118,30 +148,30 @@ export default function HomeScreen() {
   return (
     <View style={[styles.container, isDark && styles.darkContainer]}>
       <View style={[styles.header, isDark && styles.darkHeader]}>
-        <View style={styles.titleRow}>
-          <Text style={[styles.title, isDark && styles.darkTitle]}>Find your space</Text>
+        <View style={styles.headerTopRow}>
+          <CityPicker selectedCity={selectedCity} onCityChange={setSelectedCity} isDark={isDark} />
           <CartButton />
         </View>
-        <SearchBar onSearch={handleSearch} isDark={isDark} />
+        <Text style={[styles.title, isDark && styles.darkTitle, { paddingHorizontal: 16, marginBottom: 8 }]}>Find your space</Text>
         <FilterChips onFilter={handleFilter} isDark={isDark} selectedCategory={selectedCategory} />
       </View>
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={tintColor} />
         </View>
-      ) : filteredListings.length === 0 ? (
+      ) : listings.length === 0 ? (
         <View style={styles.emptyStateContainer}>
           <Ionicons name="sad-outline" size={48} color={isDark ? '#666' : '#999'} style={{ marginBottom: 16 }} />
           <Text style={[{ fontSize: 20, fontWeight: '600', color: isDark ? '#666' : '#999', marginBottom: 8, textAlign: 'center' }]}>
             No spaces found
           </Text>
           <Text style={[{ fontSize: 16, color: isDark ? '#666' : '#999', textAlign: 'center' }]}>
-            {searchQuery ? 'Try adjusting your search' : selectedCategory !== 'All' ? 'Try a different category' : 'Check back later for new listings'}
+            {selectedCity ? `No listings found in ${selectedCity} for the selected category.` : 'Check back later for new listings or try a different city/category.'}
           </Text>
         </View>
       ) : (
         <FlatList
-          data={filteredListings}
+          data={listings}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <ListingCard item={item} tintColor={tintColor} />
@@ -158,7 +188,7 @@ export default function HomeScreen() {
         ]}
       >
         <Ionicons
-          name="map-outline" // Using map-marker for a solid map icon
+          name="map-outline"
           size={20}
           color="#000"
         />
@@ -173,7 +203,62 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
-  titleRow: {
+  headerTopRow: { // New style for the top row in header
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+    paddingTop: 40,
+  },
+  cityPickerContainer: { // Container for the city picker dropdown
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0f0f0',
+    borderRadius: 25, // More rounded for BookMyShow style
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    marginLeft: -12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+    minWidth: 150, // Ensure enough width
+    justifyContent: 'center',
+    position: 'relative', // For absolute positioning of the actual picker
+  },
+  darkCityPickerContainer: {
+    backgroundColor: '#1a1a1a',
+  },
+  cityPickerText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#000',
+    marginRight: 5,
+    marginLeft: 5,
+  },
+  darkCityPickerText: {
+    color: '#fff',
+  },
+  cityPickerIcon: {
+    marginLeft: 'auto', // Push icon to the right
+  },
+  cityPicker: { // The actual Picker component, made transparent and overlaid
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+    color: 'transparent', // Make text transparent
+    opacity: 0, // Make the picker itself invisible
+  },
+  darkCityPicker: {
+    color: 'transparent', // Make text transparent
+  },
+  titleRow: { // Renamed from titleRow to headerTitleRow if needed, but keeping for now
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -192,31 +277,6 @@ const styles = StyleSheet.create({
   darkHeader: {
     backgroundColor: '#000',
     borderBottomColor: '#1a1a1a',
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f0f0f0',
-    marginHorizontal: 16,
-    marginVertical: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  darkSearchContainer: {
-    backgroundColor: '#1a1a1a',
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: '#000',
-    padding: 0,
-  },
-  darkSearchInput: {
-    color: '#fff',
   },
   filterContainer: {
     maxHeight: 40,
@@ -245,6 +305,8 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 16,
     gap: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
     fontSize: 28,

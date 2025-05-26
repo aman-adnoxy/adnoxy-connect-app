@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Dimensions, ActivityIndicator, Alert, Pressable, Linking, Share as Sharing } from 'react-native';
+import { Modal, View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Dimensions, ActivityIndicator, Alert, Pressable, Linking, Share as Sharing } from 'react-native';
+import MapView, { Marker } from 'react-native-maps';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,6 +15,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { usersService } from '@/services/users';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useCart } from '@/hooks/useCart';
+import ListingMapModal from './ListingMapModal'; // Add this import
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -250,6 +252,74 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     color: '#000',
   },
+  mapImage: {
+    width: '100%',
+    aspectRatio: 4 / 3,
+    borderRadius: 8,
+    marginTop: 12,
+    overflow: 'hidden', // Prevent scrolling in preview
+  },
+  mapImageContainer: {
+    width: '100%',
+    aspectRatio: 4 / 3,
+    borderRadius: 8,
+    marginTop: 12,
+    overflow: 'hidden',
+  },
+  mapSectionContainer: {
+    backgroundColor: '#fff', // Airbnb style usually has white background
+    borderRadius: 12,
+    padding: 0, // Remove padding from container, add to inner elements
+    marginBottom: 24,
+    borderWidth: 1, // Add border
+    borderColor: '#e0e0e0', // Light grey border
+    shadowColor: '#000', // Add shadow
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  darkMapSectionContainer: {
+    backgroundColor: '#1a1a1a', // Dark background for dark mode
+    borderColor: '#333',
+  },
+  mapSectionContent: { // New style for content inside the section
+    padding: 16,
+  },
+  expandIconContainer: {
+    position: 'absolute',
+    bottom: 10,
+    right: 10,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  showMapButton: {
+    marginTop: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    backgroundColor: '#000', // Black button
+    borderRadius: 8,
+    alignSelf: 'flex-start', // Align to start
+    marginHorizontal: 16, // Add horizontal margin to align with content
+    marginBottom: 16, // Add bottom margin
+  },
+  darkShowMapButton: {
+    backgroundColor: '#fff', // White button in dark mode
+  },
+  showMapButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  darkShowMapButtonText: {
+    color: '#000',
+  },
   availabilityContainer: {
     backgroundColor: '#f8f8f8',
     padding: 16,
@@ -307,6 +377,34 @@ const styles = StyleSheet.create({
   disabledCartButton: {
     backgroundColor: '#fff',
   },
+  directionsButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#f0f0f0',
+    marginTop: 8,
+    marginBottom: 12,
+    alignSelf: 'flex-start',
+  },
+  darkDirectionsButton: {
+    backgroundColor: '#2a2a2a',
+  },
+  squareActionButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: '#f5f5f5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  darkSquareActionButton: {
+    backgroundColor: '#222',
+  },
 });
 
 export default function ListingDetailsScreen() {
@@ -331,6 +429,7 @@ export default function ListingDetailsScreen() {
   const [showCartDatePicker, setShowCartDatePicker] = useState(false);
   const [startDate, setStartDate] = useState(new Date());
   const [endDate, setEndDate] = useState(new Date());
+  const [showMapModal, setShowMapModal] = useState(false); // New state
 
   useEffect(() => {
     loadListingAndImages();
@@ -563,17 +662,31 @@ export default function ListingDetailsScreen() {
             <Text style={[Typography.h1, styles.title, isDark && styles.darkText]}>
               {listing.title}
             </Text>
-            {/* <Text style={[Typography.price, styles.price, isDark && styles.darkPrice]}>
-              ₹{listing.price}/month
-            </Text> */}
+            <TouchableOpacity
+              style={[styles.directionsButton, isDark && styles.darkDirectionsButton]}
+              onPress={handleLocationPress}
+            >
+              <Ionicons name="navigate" size={24} color={isDark ? '#fff' : '#000'} />
+            </TouchableOpacity>
+            <Text style={[Typography.price, styles.price, isDark && styles.darkPrice]}>
+              ₹{listing.price} / month
+            </Text>
           </View>
 
           <View style={styles.infoSection}>
             <View style={styles.infoRow}>
               <FontAwesome name="map-marker" size={20} color={isDark ? '#fff' : '#000'} />
               <Text style={[Typography.body1, styles.location, isDark && styles.darkText]}>
-                {listing.address}
+                {listing.address}, {listing.city}
+                {listing.street ? `, ${listing.street}` : ''}
+                {listing.area ? `, ${listing.area}` : ''}
               </Text>
+              <TouchableOpacity
+                style={[styles.squareActionButton, isDark && styles.darkSquareActionButton]}
+                onPress={handleLocationPress}
+              >
+                <Ionicons name="navigate" size={20} color={isDark ? '#222' : '#222'} />
+              </TouchableOpacity>
             </View>
             <View style={styles.infoRow}>
               <FontAwesome name="tag" size={20} color={isDark ? '#fff' : '#000'} />
@@ -581,6 +694,14 @@ export default function ListingDetailsScreen() {
                 {listing.category}
               </Text>
             </View>
+            {listing.height && listing.width && (
+              <View style={styles.infoRow}>
+                <Ionicons name="cube-outline" size={20} color={isDark ? '#fff' : '#000'} />
+                <Text style={[Typography.body1, styles.location, isDark && styles.darkText]}>
+                  Dimensions: {listing.height} x {listing.width} {listing.unit}
+                </Text>
+              </View>
+            )}
             {ownerInfo && (
               <View style={styles.infoRow}>
                 <FontAwesome name="user" size={20} color={isDark ? '#fff' : '#000'} />
@@ -589,12 +710,57 @@ export default function ListingDetailsScreen() {
                 </Text>
               </View>
             )}
+            {/* {listing.representative_name && (
+              <View style={styles.infoRow}>
+                <Ionicons name="person-circle-outline" size={20} color={isDark ? '#fff' : '#000'} />
+                <Text style={[Typography.body1, styles.owner, isDark && styles.darkText]}>
+                  Representative: {listing.representative_name}
+                </Text>
+              </View>
+            )}
+            {listing.contact_no && (
+              <View style={styles.infoRow}>
+                <Ionicons name="call-outline" size={20} color={isDark ? '#fff' : '#000'} />
+                <Text style={[Typography.body1, styles.owner, isDark && styles.darkText]}>
+                  Contact: {listing.contact_no}
+                </Text>
+              </View>
+            )}
+            {listing.alternate_contact_no && (
+              <View style={styles.infoRow}>
+                <Ionicons name="call-outline" size={20} color={isDark ? '#fff' : '#000'} />
+                <Text style={[Typography.body1, styles.owner, isDark && styles.darkText]}>
+                  Alternate Contact: {listing.alternate_contact_no}
+                </Text>
+              </View>
+            )} */}
+            {listing.listing_source_id && (
+              <View style={styles.infoRow}>
+                <Ionicons name="information-circle-outline" size={20} color={isDark ? '#fff' : '#000'} />
+                <Text style={[Typography.body1, styles.owner, isDark && styles.darkText]}>
+                  Source ID: {listing.listing_source_id}
+                </Text>
+              </View>
+            )}
+            {listing.lighting_type && (
+              <View style={styles.infoRow}>
+                <Ionicons name="bulb-outline" size={20} color={isDark ? '#fff' : '#000'} />
+                <Text style={[Typography.body1, styles.owner, isDark && styles.darkText]}>
+                  Lighting Type: {listing.lighting_type}
+                </Text>
+              </View>
+            )}
+            {listing.quantity != null && (
+              <View style={styles.infoRow}>
+                <Ionicons name="layers-outline" size={20} color={isDark ? '#fff' : '#000'} />
+                <Text style={[Typography.body1, styles.owner, isDark && styles.darkText]}>
+                  Quantity: {listing.quantity}
+                </Text>
+              </View>
+            )}
             <View style={styles.infoRow}>
               <FontAwesome name="location-arrow" size={20} color={isDark ? '#fff' : '#000'} />
               <View style={{ flex: 1 }}>                
-                {/* <Text style={[Typography.body1, styles.coordinates, isDark && styles.darkText]}>
-                  {listing.location}
-                </Text> */}
                 <View style={styles.locationButtons}>
                   <TouchableOpacity 
                     style={[styles.mapButton, isDark && styles.darkMapButton]} 
@@ -603,15 +769,6 @@ export default function ListingDetailsScreen() {
                     <Ionicons name="map-outline" size={16} color={isDark ? '#000' : '#fff'} />
                     <Text style={[styles.mapButtonText, isDark && styles.darkMapButtonText]}>
                       Open in Maps
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={[styles.mapButton, isDark && styles.darkMapButton]} 
-                    onPress={handleStreetViewPress}
-                  >
-                    <Ionicons name="eye-outline" size={16} color={isDark ? '#000' : '#fff'} />
-                    <Text style={[styles.mapButtonText, isDark && styles.darkMapButtonText]}>
-                      See on Street View
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -632,6 +789,57 @@ export default function ListingDetailsScreen() {
 
           <View style={styles.divider} />
 
+          {/* Where's the listing section */}
+          <View style={[styles.mapSectionContainer, isDark && styles.darkMapSectionContainer]}>
+            <View style={styles.mapSectionContent}>
+              <Text style={[Typography.h3, styles.sectionTitle, isDark && styles.darkText]}>
+                Where's the listing
+              </Text>
+              {listing.latitude != null && listing.longitude != null && typeof listing.latitude === 'number' && typeof listing.longitude === 'number' && (
+                <TouchableOpacity
+                  onPress={() => setShowMapModal(true)} // Open modal
+                  activeOpacity={0.8}
+                  style={styles.mapImageContainer}
+                >
+                  <MapView
+                    style={styles.mapImage}
+                    initialRegion={{
+                      latitude: listing.latitude,
+                      longitude: listing.longitude,
+                      latitudeDelta: 0.005, // Increased zoom further
+                      longitudeDelta: 0.005, // Increased zoom further
+                    }}
+                    scrollEnabled={false} // Make the preview map unscrollable
+                    zoomEnabled={false} // Make the preview map unzoomable
+                  >
+                    <Marker
+                      coordinate={{
+                        latitude: listing.latitude,
+                        longitude: listing.longitude,
+                      }}
+                      title={listing.title ?? ''}
+                      description={listing.address ?? ''}
+                    />
+                  </MapView>
+                  {/* Add expand icon here */}
+                  <View style={styles.expandIconContainer}>
+                    <Ionicons name="expand-outline" size={24} color="#000" />
+                  </View>
+                </TouchableOpacity>
+              )}
+            </View>
+            <TouchableOpacity
+              style={[styles.showMapButton, isDark && styles.darkShowMapButton]}
+              onPress={handleStreetViewPress} // Change to handleStreetViewPress
+            >
+              <Text style={[styles.showMapButtonText, isDark && styles.darkShowMapButtonText]}>
+                View on Street view {/* Change text */}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.divider} />
+
           <View style={styles.infoSection}>
             <Text style={[Typography.h3, styles.sectionTitle, isDark && styles.darkText]}>
               Availability
@@ -644,6 +852,29 @@ export default function ListingDetailsScreen() {
               )}
             </View>
           </View>
+
+          {listing.supporting_documents && listing.supporting_documents.length > 0 && (
+            <>
+              <View style={styles.divider} />
+              <View style={styles.infoSection}>
+                <Text style={[Typography.h3, styles.sectionTitle, isDark && styles.darkText]}>
+                  Supporting Documents
+                </Text>
+                {listing.supporting_documents.map((docUrl, index) => (
+                  <TouchableOpacity 
+                    key={index} 
+                    onPress={() => Linking.openURL(docUrl)}
+                    style={styles.infoRow}
+                  >
+                    <Ionicons name="document-text-outline" size={20} color={isDark ? '#fff' : '#000'} />
+                    <Text style={[Typography.body1, styles.location, isDark && styles.darkText, { textDecorationLine: 'underline' }]}>
+                      Document {index + 1}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </>
+          )}
         </View>
       </ScrollView>
       
@@ -702,6 +933,17 @@ export default function ListingDetailsScreen() {
           display="default"
           onChange={handleCartDateChange}
           minimumDate={listing.availability_start ? new Date(listing.availability_start) : new Date()}
+        />
+      )}
+
+      {listing.latitude && listing.longitude && (
+        <ListingMapModal
+          visible={showMapModal}
+          onClose={() => setShowMapModal(false)}
+          latitude={listing.latitude}
+          longitude={listing.longitude}
+          title={listing.title ?? ''}
+          address={listing.address ?? ''}
         />
       )}
     </SafeAreaView>

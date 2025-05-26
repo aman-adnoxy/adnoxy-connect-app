@@ -84,6 +84,7 @@ export default function TabLayout() {
         options={{
           title: 'Add Listing',
           tabBarIcon: ({ color }) => <TabBarIcon name="plus" color={color} />,
+          tabBarStyle: { display: 'none' },
         }}
       />
       <Tabs.Screen

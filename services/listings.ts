@@ -1,12 +1,13 @@
 import { supabase } from './supabase';
-import { Listing } from '@/types/listing';
+import { Listing, ListingForDb } from '@/types/listing';
 
 export const listingsService = {
-  async getListings(filters?: { category?: string; search?: string }): Promise<Listing[]> {
+  async getListings(filters?: { category?: string; search?: string; city?: string }): Promise<Listing[]> {
     try {
       let query = supabase
         .from('listings')
-        .select('*');
+        .select('*')
+        .eq('verification_status', 'approved'); // Only fetch approved listings
 
       if (filters?.category) {
         query = query.eq('category', filters.category);
@@ -14,6 +15,10 @@ export const listingsService = {
 
       if (filters?.search) {
         query = query.ilike('title', `%${filters.search}%`);
+      }
+
+      if (filters?.city) {
+        query = query.ilike('city', `%${filters.city}%`);
       }
 
       const { data, error } = await query;
@@ -41,7 +46,7 @@ export const listingsService = {
     }
   },
 
-  async createListing(listing: Omit<Listing, 'id' | 'created_at'>): Promise<Listing> {
+  async createListing(listing: ListingForDb): Promise<Listing> {
     try {
       const { data, error } = await supabase
         .from('listings')
@@ -50,6 +55,8 @@ export const listingsService = {
         .single();
 
       if (error) throw error;
+      // The database now returns height and width as separate number fields, no conversion needed.
+      // New fields like listing_source_id, lighting_type, and quantity are also handled via the ListingForDb type.
       return data as Listing;
     } catch (error) {
       console.error('Error creating listing:', error);
@@ -107,7 +114,8 @@ export const listingsService = {
     try {
       let query = supabase
         .from('listings')
-        .select('*'); // Select all fields to get full Listing objects
+        .select('*')
+        .eq('verification_status', 'approved'); // Select all fields to get full Listing objects
 
       if (city) {
         query = query.ilike('city', `%${city}%`); // Filter by city if provided
@@ -122,5 +130,6 @@ export const listingsService = {
       console.error('Error fetching listing locations and prices:', error);
       throw error;
     }
-  }
+  },
+
 };
