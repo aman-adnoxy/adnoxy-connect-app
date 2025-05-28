@@ -6,11 +6,13 @@ export interface Listing {
   height: number; 
   width: number;
   unit: string;
+  size?: string; // Added size field
   lighting_type?: 'Digital' | 'BL' | 'FL' | 'NL';
-  quantity?: number;
+  quantity?: number | string; // Updated type to allow string
   description?: string;
   latitude: number;
   longitude: number;
+  google_location: string;
   address?: string;
   city: string;
   image_urls: string[];
@@ -28,6 +30,7 @@ export interface Listing {
   contact_no?: string;
   alternate_contact_no?: string | null;
   supporting_documents?: string[]; // New field for supporting documents
+  is_unavailable?: boolean; // New field to indicate unavailability
 };
 
 export interface ListingForDb extends Omit<Listing, 'created_at'> {

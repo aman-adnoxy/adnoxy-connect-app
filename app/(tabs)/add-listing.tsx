@@ -1,55 +1,31 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { StyleSheet, ScrollView, TextInput, Pressable, Image, View as RNView, Alert, ActivityIndicator, SafeAreaView, TouchableOpacity, BackHandler, Modal } from 'react-native'; // Added Modal
+import { StyleSheet, ScrollView, TextInput, Pressable, View as RNView, Alert, ActivityIndicator, SafeAreaView, TouchableOpacity, BackHandler, Modal } from 'react-native'; // Removed Image
 import { Text, View } from '@/components/Themed';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { Typography } from '@/constants/Typography';
 import { router, useFocusEffect } from 'expo-router';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
-import * as ImagePicker from 'expo-image-picker';
-import * as DocumentPicker from 'expo-document-picker'; // Added DocumentPicker
 import * as FileSystem from 'expo-file-system'; // Import FileSystem
 import { listingsService } from '@/services/listings';
 import { Listing, ListingForDb } from '@/types/listing';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/services/supabase';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import CustomPlacesSearch from '@/components/CustomPlacesSearch';
 import DetailedAddressForm from '@/components/DetailedAddressForm'; // Import the new component
-import { MapView, Marker, PROVIDER_GOOGLE } from '../../components/MapView';
-import * as Location from 'expo-location';
 import { decode } from 'base64-arraybuffer';
-
-interface Region {
-  latitude: number;
-  longitude: number;
-  latitudeDelta: number;
-  longitudeDelta: number;
-}
-
-interface GooglePlaceData {
-  description: string;
-}
-
-interface GooglePlaceDetail {
-  geometry: {
-    location: {
-      lat: number;
-      lng: number;
-    };
-  };
-}
+import LocationPickerMap from '@/components/LocationPickerMap'; // Import the new component
+import ImagePickerComponent from '@/components/ImagePickerComponent'; // Import the new ImagePickerComponent
+import DocumentPickerComponent from '@/components/DocumentPickerComponent'; // Import the new DocumentPickerComponent
 
 export default function AddListingScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const tintColor = Colors[colorScheme ?? 'light'].tint;
   const { user } = useAuth();
-  const mapRef = useRef<any>(null);
 
   const [showDisclaimer, setShowDisclaimer] = useState(true);
   const [disclaimerConfirmed, setDisclaimerConfirmed] = useState(false);
-  const [showDetailedAddressForm, setShowDetailedAddressForm] = useState(false); // New state for detailed address form
+  const [showDetailedAddressForm, setShowDetailedAddressForm] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -59,27 +35,22 @@ export default function AddListingScreen() {
   const [city, setCity] = useState('');
   const [images, setImages] = useState<{ uri: string, mimeType: string }[]>([]);
   const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null); // New state for error message
-  const [region, setRegion] = useState<Region>({
-    latitude: 23.0225, // Ahmedabad latitude
-    longitude: 72.5714, // Ahmedabad longitude
-    latitudeDelta: 0.00196, // 2% extra zoom
-    longitudeDelta: 0.00196, // 2% extra zoom
-  });
-  const [isMapReady, setIsMapReady] = useState(false);
-  const [displayAddress, setDisplayAddress] = useState('Fetching address...');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
+  const [googleLocation, setGoogleLocation] = useState<string>(''); // New state for google_location
 
   // New state variables for detailed address form
   const [street, setStreet] = useState('');
   const [area, setArea] = useState('');
-  const [landmark, setLandmark] = useState(''); // New state for landmark
+  const [landmark, setLandmark] = useState('');
   const [representativeName, setRepresentativeName] = useState('');
   const [contactNo, setContactNo] = useState('');
   const [alternateContactNo, setAlternateContactNo] = useState('');
   const [height, setHeight] = useState('');
   const [width, setWidth] = useState('');
   const [unit, setUnit] = useState('');
-  const [supportingDocuments, setSupportingDocuments] = useState<string[]>([]);
+  const [supportingDocuments, setSupportingDocuments] = useState<{ uri: string, mimeType: string }[]>([]); // Added back for DocumentPickerComponent
 
   // New states for additional fields
   const [listingSourceId, setListingSourceId] = useState('');
@@ -89,11 +60,11 @@ export default function AddListingScreen() {
   // State for dropdown visibility
   const [isCategoryPickerVisible, setCategoryPickerVisible] = useState(false);
   const [isUnitPickerVisible, setUnitPickerVisible] = useState(false);
-  const [isLightingTypePickerVisible, setLightingTypePickerVisible] = useState(false); // New state for lighting type picker
+  const [isLightingTypePickerVisible, setLightingTypePickerVisible] = useState(false);
 
   const categories = ['Billboard', 'Backlit billboard', 'LED Display', 'Banner'];
   const units = ['cm', 'inches', 'm', 'feet'];
-  const lightingTypes = ['Digital', 'BL', 'FL', 'NL']; // Options for lighting_type
+  const lightingTypes = ['Digital', 'BL', 'FL', 'NL'];
 
   if (!user) {
     return (
@@ -114,87 +85,24 @@ export default function AddListingScreen() {
     );
   }
 
-  const resolveAddress = async (lat: number, lng: number) => {
-    try {
-      const geocodedAddress = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
-      if (geocodedAddress && geocodedAddress.length > 0) {
-        const address = geocodedAddress[0];
-        const formattedAddress = [
-          address.name,
-          address.street,
-          address.city,
-          address.region,
-          address.postalCode,
-          address.country,
-        ].filter(Boolean).join(', ');
-        setDisplayAddress(formattedAddress);
-        setAddress(formattedAddress); // Also update the address state for the form
-        setCity(address.city || ''); // Set the city using the geocoded address
-      } else {
-        setDisplayAddress('Address not found');
-        setAddress('');
-        setCity(''); // Clear city if address not found
-      }
-    } catch (error) {
-      console.error('Error resolving address:', error);
-      setDisplayAddress('Error fetching address');
-      setAddress('');
-      setCity(''); // Clear city on error
-    }
-  };
-
-  const getCurrentLocation = async () => {
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission Denied', 'Location permission is required to show your current location');
-        return;
-      }
-
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High
-      });
-
-      const { latitude, longitude } = location.coords;
-      const newRegion = {
-        latitude,
-        longitude,
-        latitudeDelta: 0.00196, // 2% extra zoom
-        longitudeDelta: 0.00196, // 2% extra zoom
-      };
-      setRegion(newRegion);
-
-      if (mapRef.current) {
-        mapRef.current.animateToRegion(newRegion, 1000);
-      }
-      resolveAddress(latitude, longitude);
-    } catch (error) {
-      console.error('Error getting location:', error);
-      Alert.alert('Error', 'Failed to get your current location');
-    }
-  };
-
   useFocusEffect(
     useCallback(() => {
-      // Removed getCurrentLocation() from here to prevent overriding selected location on focus.
-      // It will now only be called when the "current location" button is pressed.
-
       const onBackPress = () => {
         if (showForm) {
           setShowForm(false);
-          setShowDetailedAddressForm(true); // Go back to detailed address form
+          setShowDetailedAddressForm(true);
           return true;
         } else if (showDetailedAddressForm) {
-          setShowDetailedAddressForm(false); // Go back to map view
+          setShowDetailedAddressForm(false);
           // Discard detailed address values when physical back button is pressed
           setStreet('');
           setArea('');
-          setLandmark(''); // Clear landmark on back
+          setLandmark('');
           setRepresentativeName('');
           setContactNo('');
           setAlternateContactNo('');
           return true;
-        } else if (!showDisclaimer) { // If on map view
+        } else if (!showDisclaimer) {
           setShowDisclaimer(true);
           setDisclaimerConfirmed(false);
           return true;
@@ -207,69 +115,6 @@ export default function AddListingScreen() {
       return () => subscription.remove();
     }, [showForm, showDetailedAddressForm, showDisclaimer])
   );
-
-  const handleRegionChangeComplete = (newRegion: Region) => {
-    setRegion(newRegion);
-    resolveAddress(newRegion.latitude, newRegion.longitude);
-  };
-
-  const handlePlaceSelect = (data: GooglePlaceData, details: GooglePlaceDetail | null) => {
-    if (!details) return;
-    
-    const { lat, lng } = details.geometry.location;
-    const newRegion = {
-      ...region,
-      latitude: lat,
-      longitude: lng,
-    };
-    setRegion(newRegion);
-    if (mapRef.current) {
-      mapRef.current.animateToRegion(newRegion, 1000);
-    }
-    // Do not set displayAddress directly here. Let handleRegionChangeComplete do it.
-    setAddress(data.description); // Keep this to populate the form's address field
-  };
-
-  const handlePickImage = async () => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: false, // Allow any aspect ratio
-        quality: 1,
-      });
-
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        const newImage = { uri: result.assets[0].uri, mimeType: result.assets[0].mimeType || 'application/octet-stream' };
-        setImages(prevImages => [...prevImages, newImage]);
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to pick image');
-    }
-  };
-
-  const handleRemoveImage = (index: number) => {
-    setImages(prevImages => prevImages.filter((_, i) => i !== index));
-  };
-
-  const handlePickDocument = async () => {
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: '*/*', // Allow all document types
-        copyToCacheDirectory: true,
-      });
-
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        const newDocumentUri = result.assets[0].uri;
-        setSupportingDocuments(prevDocs => [...prevDocs, newDocumentUri]);
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to pick document');
-    }
-  };
-
-  const handleRemoveDocument = (index: number) => {
-    setSupportingDocuments(prevDocs => prevDocs.filter((_, i) => i !== index));
-  };
 
   const handleSubmit = async () => {
     // Console log all details
@@ -294,8 +139,8 @@ export default function AddListingScreen() {
       listingSourceId,
       lightingType,
       quantity,
-      latitude: region.latitude,
-      longitude: region.longitude,
+      latitude,
+      longitude,
     });
 
     // Validate required fields (supportingDocuments, listingSourceId, lightingType, quantity are optional)
@@ -364,13 +209,14 @@ export default function AddListingScreen() {
 
       // Upload supporting documents to storage with UUID path (if any)
       const documentUrls = await Promise.all(
-        supportingDocuments.map(async (docUri) => {
-          const response = await fetch(docUri);
-          const base64 = await FileSystem.readAsStringAsync(docUri, { encoding: 'base64' }); // Changed to base64
-          const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${docUri.split('.').pop()}`;
+        supportingDocuments.map(async (docObject) => {
+          const response = await fetch(docObject.uri);
+          const base64 = await FileSystem.readAsStringAsync(docObject.uri, { encoding: 'base64' }); // Changed to base64
+          const fileExtension = docObject.mimeType.split('/')[1] || docObject.uri.split('.').pop(); // Use mimeType or fallback to uri extension
+          const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExtension}`;
           const { data, error } = await supabase.storage
             .from('listings')
-            .upload(`${listingUuid}/documents/${fileName}`, decode(base64), { contentType: 'application/octet-stream' }); // Changed to base64 upload with content type
+            .upload(`${listingUuid}/documents/${fileName}`, decode(base64), { contentType: docObject.mimeType }); // Changed to base64 upload with content type
               
           if (error) throw error;
           const { data: { publicUrl } } = supabase.storage
@@ -398,8 +244,9 @@ export default function AddListingScreen() {
         image_urls: imageUrls,
         supporting_documents: documentUrls,
         verification_status: 'pending',
-        latitude: region.latitude,
-        longitude: region.longitude,
+        latitude: latitude!,
+        longitude: longitude!,
+        google_location: googleLocation, // Add google_location field
         // Add new detailed address fields
         street: street,
         area: area,
@@ -431,50 +278,6 @@ export default function AddListingScreen() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const renderImageTile = (imageObject?: { uri: string, mimeType: string }, index?: number) => {
-    const isPlaceholder = !imageObject;
-    const showAddButton = isPlaceholder && images.length < 5; // Only show add button if it's a placeholder and less than 5 images
-
-    return (
-      <RNView 
-        key={imageObject?.uri || `placeholder-${index}`}
-        style={[
-          styles.imageTile,
-          isDark && styles.darkImageTile,
-          styles.shadow
-        ]}
-      >
-        {showAddButton ? (
-          <Pressable
-            onPress={handlePickImage}
-            style={({ pressed }) => [
-              styles.addButton,
-              { opacity: pressed ? 0.7 : 1 }
-            ]}
-          >
-            <FontAwesome name="plus" size={32} color={isDark ? '#fff' : '#000'} />
-            <Text style={[styles.addButtonText, isDark && styles.darkAddButtonText]}>
-              Add Photo
-            </Text>
-          </Pressable>
-        ) : imageObject?.uri ? (
-          <RNView style={styles.imageContainer}>
-            <Image source={{ uri: imageObject.uri }} style={styles.image} resizeMode="contain" />
-            <Pressable
-              onPress={() => handleRemoveImage(index!)}
-              style={({ pressed }) => [
-                styles.removeButton,
-                { opacity: pressed ? 0.7 : 1 }
-              ]}
-            >
-              <FontAwesome name="times" size={20} color="#fff" />
-            </Pressable>
-          </RNView>
-        ) : null}
-      </RNView>
-    );
   };
 
   if (showDisclaimer) {
@@ -520,7 +323,6 @@ export default function AddListingScreen() {
               onPress={() => {
                 if (disclaimerConfirmed) {
                   setShowDisclaimer(false);
-                  getCurrentLocation(); // Reanimate map to current location when proceeding from disclaimer
                 } else {
                   Alert.alert('Confirmation Required', 'Please confirm that you are the legal owner or authorized representative.');
                 }
@@ -554,7 +356,6 @@ export default function AddListingScreen() {
           onConfirm={() => setShowForm(true)} // Navigate to main listing form
           onBack={() => {
             setShowDetailedAddressForm(false); // Go back to map view
-            getCurrentLocation(); // Reanimate map to current location
             // Discard detailed address values
             setStreet('');
             setArea('');
@@ -563,73 +364,25 @@ export default function AddListingScreen() {
             setContactNo('');
             setAlternateContactNo('');
           }}
-          displayAddress={displayAddress}
+          onClose={() => setShowDetailedAddressForm(false)} // Pass onClose prop
+          displayAddress={googleLocation} // Pass googleLocation as displayAddress
         />
       );
     }
 
     return (
-      <SafeAreaView style={[styles.container, isDark && styles.darkContainer]}>
-        <View style={[styles.mapScreenHeader, isDark && { backgroundColor: Colors.dark.background, borderBottomColor: Colors.dark.border }]}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => setShowDisclaimer(true)} // Go back to disclaimer
-          >
-            <Ionicons name="arrow-back" size={24} color={isDark ? Colors.dark.text : Colors.light.text} />
-          </TouchableOpacity>
-          <Text style={[Typography.h2, styles.headerTitle, isDark && styles.darkHeaderTitle]}>
-            Add the location
-          </Text>
-        </View>
-
-        <View style={styles.mapViewContainer}>
-          <MapView
-            ref={mapRef}
-            style={styles.map}
-            provider={PROVIDER_GOOGLE}
-            initialRegion={region}
-            onRegionChangeComplete={handleRegionChangeComplete} // Use handleRegionChangeComplete
-            onMapReady={() => setIsMapReady(true)}
-            showsUserLocation
-          >
-          </MapView>
-          <Ionicons name="location" size={40} color="red" style={styles.fixedMarker} />
-          <TouchableOpacity
-            style={[styles.currentLocationButton, { backgroundColor: tintColor }]}
-            onPress={getCurrentLocation}
-          >
-            <Ionicons name="locate" size={24} color="#fff" />
-          </TouchableOpacity>
-          <View style={styles.searchBarContainer}>
-            <CustomPlacesSearch
-              onPlaceSelected={handlePlaceSelect}
-              googlePlacesApiKey="AIzaSyDBu0mE3-x_rXqwjf1eUej7-7YDjhvbMPs"
-              initialRegion={region}
-            />
-          </View>
-        </View>
-
-        <View style={[styles.footerContainer, isDark && styles.darkFooterContainer]}>
-          <Text style={[Typography.body1, styles.footerAddressLabel, isDark ? { color: Colors.dark.textSecondary } : { color: Colors.light.textSecondary }]}>
-            Selected Location:
-          </Text>
-          <Text style={[Typography.h3, styles.footerAddressText, isDark ? { color: Colors.dark.text } : { color: Colors.light.text }]} numberOfLines={2}>
-            {displayAddress}
-          </Text>
-          <TouchableOpacity
-            style={[styles.confirmLocationButton, { backgroundColor: tintColor }]}
-            onPress={() => {
-              if (displayAddress === 'Fetching address...' || displayAddress === 'Address not found' || displayAddress === 'Error fetching address') {
-                Alert.alert('Location Required', 'Please wait for the location to be detected or try selecting a different location.');
-                return;
-              }
-              setShowDetailedAddressForm(true);
-            }}
-          >
-            <Text style={styles.confirmLocationText}>Confirm Location & Continue</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
+      <LocationPickerMap
+        onLocationSelect={(lat: number, lng: number, google_loc: string) => {
+          setLatitude(lat);
+          setLongitude(lng);
+          setGoogleLocation(google_loc);
+          setShowDetailedAddressForm(true);
+        }}
+        onClose={() => setShowDisclaimer(true)}
+        initialLatitude={latitude || undefined}
+        initialLongitude={longitude || undefined}
+        initialGoogleLocation={googleLocation || undefined}
+      />
     );
   }
 
@@ -661,22 +414,13 @@ export default function AddListingScreen() {
             </View>
           </Modal>
 
-          <View style={styles.imageSection}>
-            <Text style={[Typography.body1, styles.label, isDark && styles.darkLabel]}>
-              Images ({images.length}/5)
-            </Text>
-            <View style={styles.imageGrid}>
-              {loading && (
-                <RNView style={styles.loadingContainer}>
-                  <ActivityIndicator size="large" color={tintColor} />
-                </RNView>
-              )}
-              <View style={styles.gridRow}>
-                {images.map((imageObject, index) => renderImageTile(imageObject, index))}
-                {images.length < 5 && renderImageTile(undefined, images.length)} {/* Show add button only if less than 5 images */}
-              </View>
-            </View>
-          </View>
+          <ImagePickerComponent
+            images={images}
+            setImages={setImages}
+            loading={loading}
+            tintColor={tintColor}
+            isDark={isDark}
+          />
 
           {/* New Listing Source ID field */}
           <View style={styles.inputGroup}>
@@ -864,38 +608,13 @@ export default function AddListingScreen() {
             />
           </View>
 
-          {/* Existing Supporting Documents section */}
-          <View style={styles.inputGroup}>
-            <Text style={[Typography.body1, styles.label, isDark && styles.darkLabel]}>
-              Supporting Documents
-            </Text>
-            <View style={styles.documentList}>
-              {supportingDocuments.map((docUri, index) => (
-                <RNView key={index} style={[styles.documentTile, isDark && styles.darkDocumentTile]}>
-                  <Ionicons name="document-text-outline" size={24} color={isDark ? Colors.dark.text : Colors.light.text} />
-                  <Text style={[styles.documentName, isDark && styles.darkDocumentName]} numberOfLines={1}>
-                    {docUri.split('/').pop()}
-                  </Text>
-                  <Pressable onPress={() => handleRemoveDocument(index)} style={styles.removeDocumentButton}>
-                    <Ionicons name="close-circle" size={20} color="red" />
-                  </Pressable>
-                </RNView>
-              ))}
-              <Pressable
-                onPress={handlePickDocument}
-                style={({ pressed }) => [
-                  styles.addDocumentButton,
-                  { opacity: pressed ? 0.7 : 1 },
-                  isDark && styles.darkAddDocumentButton,
-                ]}
-              >
-                <FontAwesome name="plus" size={20} color={isDark ? Colors.dark.text : Colors.light.text} />
-                <Text style={[styles.addDocumentButtonText, isDark && styles.darkAddDocumentButtonText]}>
-                  Add Document
-                </Text>
-              </Pressable>
-            </View>
-          </View>
+          <DocumentPickerComponent
+            documents={supportingDocuments}
+            setDocuments={setSupportingDocuments}
+            loading={loading}
+            tintColor={tintColor}
+            isDark={isDark}
+          />
 
           {errorMessage && (
             <Text style={styles.errorText}>{errorMessage}</Text>
@@ -1083,84 +802,6 @@ const styles = StyleSheet.create({
     color: '#fff', // Assuming white text on colored button
     fontSize: 18, // Slightly larger font
     fontWeight: '700', // Bolder font
-  },
-  imageSection: {
-    marginBottom: 24,
-    backgroundColor: 'transparent',
-  },
-  imageGrid: {
-    backgroundColor: 'transparent',
-  },
-  gridRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'flex-start', // Changed to flex-start to allow images to flow naturally
-    marginHorizontal: -5, // Adjusted margin for spacing
-  },
-  imageTile: {
-    width: '48%', // Adjusted width for two columns with spacing
-    backgroundColor: Colors.light.cardBackground,
-    borderRadius: 12,
-    overflow: 'hidden',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-    marginVertical: 5, // Added vertical margin
-    marginHorizontal: 5, // Added horizontal margin
-    paddingBottom: '48%', // Maintain aspect ratio for the tile itself
-    position: 'relative',
-  },
-  darkImageTile: {
-    backgroundColor: Colors.dark.cardBackground,
-    borderColor: Colors.dark.border,
-  },
-  shadow: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  addButton: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  addButtonText: {
-    marginTop: 8,
-    fontSize: 14,
-    color: Colors.light.textSecondary, // Use Colors for consistency
-  },
-  darkAddButtonText: {
-    color: Colors.dark.textSecondary, // Use Colors for consistency
-  },
-  imageContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'contain', // Changed resizeMode to contain
-  },
-  removeButton: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)', // Slightly darker overlay
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   dateInput: {
     justifyContent: 'center',

@@ -9,9 +9,10 @@ import { listingsService } from '@/services/listings';
 import { Listing } from '@/types/listing';
 import { CartButton } from '@/components/CartButton';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router'; // Removed useLocalSearchParams
+import { router } from 'expo-router';
 import { Picker } from '@react-native-picker/picker';
 import * as Location from 'expo-location';
+import { useFocusEffect } from '@react-navigation/native';
 
 function FilterChips({ onFilter, isDark, selectedCategory }: { onFilter: (category: string) => void, isDark: boolean, selectedCategory: string }) {
   const categories = ['All', 'Billboard', 'LED Display', 'Banner'];
@@ -116,9 +117,11 @@ export default function HomeScreen() {
     })();
   }, []);
 
-  useEffect(() => {
-    loadListings();
-  }, [selectedCategory, selectedCity]);
+  useFocusEffect(
+    useCallback(() => {
+      loadListings();
+    }, [selectedCategory, selectedCity])
+  );
 
   const loadListings = async () => {
     try {
@@ -174,7 +177,7 @@ export default function HomeScreen() {
           data={listings}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <ListingCard item={item} tintColor={tintColor} />
+            <ListingCard item={item} tintColor={tintColor} showVerificationStatus={false} />
           )}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}

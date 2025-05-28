@@ -3,7 +3,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Link, Tabs } from 'expo-router';
 import { Pressable, useColorScheme, View, Text } from 'react-native';
 import { useCart } from '@/hooks/useCart';
-import { useWishlist } from '@/hooks/useWishlist';
+import { usePlan } from '@/hooks/usePlan';
 import Colors from '@/constants/Colors';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
 import { CartButton } from '@/components/CartButton';
@@ -43,7 +43,7 @@ function Badge({ count, color }: { count: number; color: string }) {
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const { items: cartItems } = useCart();
-  const { items: wishlistItems } = useWishlist();
+  const { plans: planItems } = usePlan();
   const tintColor = Colors[colorScheme ?? 'light'].tint;
 
   return (
@@ -68,17 +68,24 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="plans"
+        options={{
+          title: 'Plans',
+          tabBarIcon: ({ color }) => <TabBarIcon name="list-alt" color={color} />,
+        }}
+      />
+      {/* <Tabs.Screen
         name="wishlist"
         options={{
           title: 'Wishlist',
           tabBarIcon: ({ color }) => (
             <View>
               <TabBarIcon name="heart" color={color} />
-              <Badge count={wishlistItems.length} color={tintColor} />
+              <Badge count={planItems.length} color={tintColor} />
             </View>
           ),
         }}
-      />
+      /> */}
       <Tabs.Screen
         name="add-listing"
         options={{

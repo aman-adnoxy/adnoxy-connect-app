@@ -59,8 +59,8 @@ export default function ListingMapModal({
           initialRegion={{
             latitude: latitude,
             longitude: longitude,
-            latitudeDelta: 0.002, // Increased zoom
-            longitudeDelta: 0.002, // Increased zoom
+            latitudeDelta: 0.0922, // Increased zoom
+            longitudeDelta: 0.0421, // Increased zoom
           }}
           showsUserLocation={true}
           scrollEnabled={true} // Ensure full screen map is scrollable
@@ -118,6 +118,5 @@ const styles = StyleSheet.create({
   map: {
     flex: 1,
     width: width,
-    height: height,
   },
 });

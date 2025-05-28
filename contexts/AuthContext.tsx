@@ -9,6 +9,7 @@ interface AuthContextType {
   signIn: (credentials: LoginCredentials) => Promise<AuthResponse>;
   signUp: (credentials: LoginCredentials) => Promise<AuthResponse>;
   signOut: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -29,4 +30,4 @@ export function useAuth() {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-} 
+}

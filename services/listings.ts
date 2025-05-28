@@ -95,13 +95,22 @@ export const listingsService = {
     }
   },
 
-  async getUserListings(userId: string): Promise<Listing[]> {
+  async getUserListings(filters: { userId: string; search?: string; verificationStatus?: 'pending' | 'approved' | 'rejected' }): Promise<Listing[]> {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('listings')
         .select('*')
-        .eq('user_id', userId);
+        .eq('user_id', filters.userId);
 
+      if (filters.search) {
+        query = query.ilike('title', `%${filters.search}%`);
+      }
+
+      if (filters.verificationStatus) { // 'All' is handled in the UI, so if it exists here, it's a valid status
+        query = query.eq('verification_status', filters.verificationStatus);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data as Listing[];
     } catch (error) {

@@ -8,8 +8,8 @@ import 'react-native-reanimated';
 import { Tabs } from 'expo-router';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { useColorScheme } from '@/components/useColorScheme';
-import { WishlistProvider } from '@/hooks/useWishlist';
 import { CartProvider } from '@/hooks/useCart';
+import { PlanProvider } from '@/hooks/usePlan';
 import Colors from '@/constants/Colors';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -99,11 +99,11 @@ export default function Layout() {
 
   return (
     <AuthProvider>
-      <WishlistProvider>
+      <PlanProvider>
         <CartProvider>
           <RootLayoutNav />
         </CartProvider>
-      </WishlistProvider>
+      </PlanProvider>
     </AuthProvider>
   );
 }
@@ -128,6 +128,8 @@ function RootLayoutNav() {
           headerBackTitle: 'Back',
         }} />
         <Stack.Screen name="map" options={{ headerShown: false }} />
+        <Stack.Screen name="my-listings" options={{ headerShown: false }} />
+        <Stack.Screen name="listing/edit/[id]" options={{ headerShown: false }} />
       </Stack>
     </ThemeProvider>
   );

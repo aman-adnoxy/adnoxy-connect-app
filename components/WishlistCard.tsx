@@ -5,7 +5,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { Typography } from '@/constants/Typography';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useWishlist } from '@/hooks/useWishlist';
+import { usePlan } from '@/hooks/usePlan';
 import { Listing } from '@/types/listing';
 import { useState, useEffect } from 'react';
 import { listingsService } from '@/services/listings';
@@ -29,8 +29,8 @@ function WishlistButton({
   isDark: boolean,
   onWishlistToggle?: () => void 
 }) {
-  const { items, addToWishlist, removeFromWishlist } = useWishlist();
-  const isWishlisted = items.some(item => item.id === listingId);
+  const { plans, addToPlan, removeFromPlan } = usePlan();
+  const isWishlisted = plans.some(item => item.id === listingId);
 
   const handlePress = (e: any) => {
     e.stopPropagation();
@@ -39,11 +39,11 @@ function WishlistButton({
       onWishlistToggle();
     } else {
       if (isWishlisted) {
-        removeFromWishlist(listingId);
+        removeFromPlan(listingId);
       } else {
         // We need to get the full listing to add it to wishlist
         listingsService.getListingById(listingId).then(listing => {
-          addToWishlist(listing);
+          addToPlan(listing);
         });
       }
     }

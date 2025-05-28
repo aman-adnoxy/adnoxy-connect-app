@@ -5,11 +5,12 @@ import { Text, View } from '@/components/Themed';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { Typography } from '@/constants/Typography';
-import { useWishlist } from '@/hooks/useWishlist';
+import { usePlan } from '@/hooks/usePlan';
 import type { Listing } from '@/types/listing';
 import { listingsService } from '@/services/listings';
 import { useAuth } from '@/hooks/useAuth';
 import { Ionicons } from '@expo/vector-icons';
+import AddToPlanModal from '@/components/AddToPlanModal';
 
 const { width: screenWidth } = Dimensions.get('window');
 const CARD_WIDTH = screenWidth - 32; // Full width minus padding
@@ -19,6 +20,8 @@ interface ListingCardProps {
   item: Listing;
   tintColor: string;
   onWishlistToggle?: () => void;
+  onPress?: (listingId: string) => void;
+  showVerificationStatus?: boolean; // New prop to conditionally show verification status
 }
 
 function ImageCarousel({ images, isDark }: { images: string[], isDark: boolean }) {
@@ -100,66 +103,20 @@ function ImageCarousel({ images, isDark }: { images: string[], isDark: boolean }
   );
 }
 
-function WishlistButton({ listingId, isDark, onWishlistToggle }: { listingId: string, isDark: boolean, onWishlistToggle?: () => void }) {
-  const { items, addToWishlist, removeFromWishlist } = useWishlist();
-  const isWishlisted = items.some(item => item.id === listingId);
-  const { user } = useAuth();
-  const router = useRouter();
-
-  const handlePress = async (e: any) => {
-    e.stopPropagation();
-    e.preventDefault();
-
-    if (!user) {
-      router.replace('/auth/login');
-      return;
-    }
-
-    try {
-      if (isWishlisted) {
-        await removeFromWishlist(listingId);
-      } else {
-        const listing = await listingsService.getListingById(listingId);
-        if (listing) {
-          await addToWishlist(listing);
-        }
-      }
-      // Only call onWishlistToggle if provided (for custom handling)
-      if (onWishlistToggle) {
-        onWishlistToggle();
-      }
-    } catch (error) {
-      console.error('Error toggling wishlist:', error);
-    }
-  };
-
-  return (
-    <Pressable
-      onPress={handlePress}
-      style={({ pressed }) => [
-        styles.wishlistButton,
-        { opacity: pressed ? 0.7 : 1 },
-        { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.9)' }
-      ]}
-    >
-      <Ionicons
-        name={isWishlisted ? "heart" : "heart-outline"}
-        size={24}
-        color={isWishlisted ? "#ff3b30" : isDark ? "#000" : "#000"}
-        style={styles.wishlistIcon}
-      />
-    </Pressable>
-  );
-}
-
-export function ListingCard({ item, tintColor, onWishlistToggle }: ListingCardProps) {
+export function ListingCard({ item, tintColor, onWishlistToggle, onPress, showVerificationStatus }: ListingCardProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [showAddToPlan, setShowAddToPlan] = useState(false);
   const router = useRouter();
    
-  const handlePress = () => {
-    router.push(`/listing/${item.id}?imageIndex=${currentImageIndex}`);
+  // Determine the actual press handler based on whether an onPress prop is provided
+  const handleCardPress = () => {
+    if (onPress) {
+      onPress(item.id);
+    } else {
+      router.push(`/listing/${item.id}?imageIndex=${currentImageIndex}`);
+    }
   };
 
   const handleScroll = (e: any) => {
@@ -169,7 +126,13 @@ export function ListingCard({ item, tintColor, onWishlistToggle }: ListingCardPr
   };
 
   return (
-    <View style={[styles.listingItem, isDark && styles.darkListingItem]}>
+    <Pressable
+      style={() => [
+        styles.listingItem,
+        isDark && styles.darkListingItem,
+      ]}
+      onPress={handleCardPress} // Use the determined handler for the whole card
+    >
       <View style={[styles.imageContainer, isDark && styles.darkImageContainer]}>
         <ScrollView
           horizontal
@@ -180,13 +143,11 @@ export function ListingCard({ item, tintColor, onWishlistToggle }: ListingCardPr
           decelerationRate="fast"
         >
           {item.image_urls.map((url, index) => (
-             <Pressable key={index} onPress={handlePress}>
             <Image
               key={index}
               source={{ uri: url }}
               style={styles.image}
             />
-            </Pressable>
           ))}
         </ScrollView>
         {item.image_urls.length > 1 && (
@@ -205,13 +166,11 @@ export function ListingCard({ item, tintColor, onWishlistToggle }: ListingCardPr
           </View>
         )}
       </View>
-      <Pressable
-        style={({ pressed }) => [
+      <View
+        style={[
           styles.textContainer,
           isDark && styles.darkTextContainer,
-          { opacity: pressed ? 0.7 : 1 }
         ]}
-        onPress={handlePress}
       >
         <View style={styles.titleRow}>
           <Text style={[Typography.h3, styles.listingTitle, isDark && styles.darkListingTitle]} numberOfLines={1}>
@@ -223,7 +182,7 @@ export function ListingCard({ item, tintColor, onWishlistToggle }: ListingCardPr
         </View>
         <View style={styles.detailsRow}>
           <Text style={[Typography.body2, styles.listingLocation, isDark && styles.darkListingLocation]} numberOfLines={1}>
-            {item.address}
+            {item.google_location || item.address}
           </Text>
           <Text style={[Typography.caption, styles.availabilityText, isDark && styles.darkAvailabilityText]}>
             {item.availability_start ? `Available from ${new Date(item.availability_start).toLocaleDateString()}` : 'Not Available'}
@@ -232,13 +191,45 @@ export function ListingCard({ item, tintColor, onWishlistToggle }: ListingCardPr
         <Text style={[Typography.category, styles.listingCategory, isDark && styles.darkListingCategory]}>
           {item.category}
         </Text>
+      </View>
+      {showVerificationStatus && (
+        <View style={[
+          styles.verificationBadge,
+          item.verification_status === 'pending' && styles.badgePending,
+          item.verification_status === 'approved' && styles.badgeApproved,
+          item.verification_status === 'rejected' && styles.badgeRejected,
+        ]}>
+          <Ionicons 
+            name={
+              item.verification_status === 'approved' ? 'checkmark-circle' :
+              item.verification_status === 'pending' ? 'time' :
+              'close-circle'
+            } 
+            size={16} 
+            color="#fff" 
+            style={styles.badgeIcon} 
+          />
+          <Text style={styles.badgeText}>
+            {item.verification_status.charAt(0).toUpperCase() + item.verification_status.slice(1)}
+          </Text>
+        </View>
+      )}
+      <Pressable
+        onPress={() => setShowAddToPlan(true)}
+        style={({ pressed }) => [
+          styles.wishlistButton,
+          { opacity: pressed ? 0.7 : 1 },
+          { backgroundColor: tintColor }
+        ]}
+      >
+        <Ionicons name="add-circle-outline" size={24} color="#fff" style={styles.wishlistIcon} />
       </Pressable>
-      <WishlistButton 
-        listingId={item.id} 
-        isDark={isDark} 
-        onWishlistToggle={onWishlistToggle}
+      <AddToPlanModal
+        visible={showAddToPlan}
+        onClose={() => setShowAddToPlan(false)}
+        listing={item}
       />
-    </View>
+    </Pressable>
   );
 }
 
@@ -366,6 +357,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 6,
     alignSelf: 'flex-start',
+    marginBottom: 8, // Added margin bottom for spacing
   },
   darkListingCategory: {
     color: '#999',
@@ -426,5 +418,35 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
     shadowRadius: 2,
+  },
+  // New styles for verification badge
+  verificationBadge: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    zIndex: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 15,
+    backgroundColor: 'rgba(0,0,0,0.6)', // Default dark background
+  },
+  badgeIcon: {
+    marginRight: 4,
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  badgePending: {
+    backgroundColor: Colors.light.warning,
+  },
+  badgeApproved: {
+    backgroundColor: Colors.light.success,
+  },
+  badgeRejected: {
+    backgroundColor: Colors.light.error,
   },
 });

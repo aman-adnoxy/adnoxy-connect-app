@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, TextInput, TouchableOpacity, ScrollView, SafeAreaView, Alert } from 'react-native';
+import { StyleSheet, TextInput, TouchableOpacity, ScrollView, SafeAreaView, Alert, ViewStyle } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { Typography } from '@/constants/Typography';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -21,7 +21,10 @@ interface DetailedAddressFormProps {
   setAlternateContactNo: (text: string) => void;
   onConfirm: () => void;
   onBack: () => void;
-  displayAddress: string; // To display the previously selected address
+  onClose?: () => void; // New optional prop to close the modal
+  style?: ViewStyle; // New optional prop for styling the container
+  displayAddress?: string; // To display the previously selected address (now optional)
+  hideDisplayAddress?: boolean; // New optional prop to hide the display address section
 }
 
 export default function DetailedAddressForm({
@@ -39,7 +42,10 @@ export default function DetailedAddressForm({
   setAlternateContactNo,
   onConfirm,
   onBack,
+  onClose, // Destructure new prop
+  style, // Destructure new prop
   displayAddress,
+  hideDisplayAddress = false, // Default to false
 }: DetailedAddressFormProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -55,31 +61,42 @@ export default function DetailedAddressForm({
   };
 
   return (
-    <SafeAreaView style={[styles.container, isDark && styles.darkContainer]}>
+    <SafeAreaView style={[styles.container, isDark && styles.darkContainer, style]}>
       <View style={[styles.header, isDark && styles.darkHeader]}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={onBack}
-        >
-          <Ionicons name="arrow-back" size={24} color={isDark ? Colors.dark.text : Colors.light.text} />
-        </TouchableOpacity>
+        {onClose ? (
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={onClose}
+          >
+            <Ionicons name="close" size={24} color={isDark ? Colors.dark.text : Colors.light.text} />
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={onBack}
+          >
+            <Ionicons name="arrow-back" size={24} color={isDark ? Colors.dark.text : Colors.light.text} />
+          </TouchableOpacity>
+        )}
         <Text style={[Typography.h2, styles.headerTitle, isDark && styles.darkHeaderTitle]}>
           Detailed Address
         </Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.contentContainer}>
-        <View style={[styles.addressHeaderContainer, isDark && styles.darkAddressHeaderContainer]}>
-          <Text style={[Typography.h3, styles.displayAddressHeading, isDark && styles.darkDisplayAddressHeading]}>
-            {displayAddress}
-          </Text>
-          <TouchableOpacity
-            style={[styles.changeLocationButton, { backgroundColor: tintColor }]}
-            onPress={onBack}
-          >
-            <Text style={styles.changeLocationButtonText}>Change Location</Text>
-          </TouchableOpacity>
-        </View>
+        {!hideDisplayAddress && ( // Conditionally render based on hideDisplayAddress prop
+          <View style={[styles.addressHeaderContainer, isDark && styles.darkAddressHeaderContainer]}>
+            <Text style={[Typography.h3, styles.displayAddressHeading, isDark && styles.darkDisplayAddressHeading]}>
+              {displayAddress}
+            </Text>
+            <TouchableOpacity
+              style={[styles.changeLocationButton, { backgroundColor: tintColor }]}
+              onPress={onBack}
+            >
+              <Text style={styles.changeLocationButtonText}>Change Location</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View style={[styles.formContainer, isDark && styles.darkFormContainer]}>
           <View style={styles.inputGroup}>
@@ -193,6 +210,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  closeButton: { // New style for close button
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   headerTitle: {
     flex: 1,
     textAlign: 'left', // Align left
@@ -234,7 +257,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   darkDisplayAddressHeading: {
-    color: Colors.dark.text,
+    color: '#fff',
   },
   changeLocationButton: {
     paddingVertical: 8,
@@ -243,7 +266,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.tint, // Use tint color
   },
   changeLocationButtonText: {
-    color: '#fff',
+    color: '#000',
     fontSize: 14,
     fontWeight: '600',
   },

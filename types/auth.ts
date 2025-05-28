@@ -1,6 +1,7 @@
 import { User as SupabaseUser } from '@supabase/supabase-js';
+import { Profile } from './user';
 
-export type User = SupabaseUser;
+export type User = SupabaseUser & Profile;
 
 export interface LoginCredentials {
   email: string;
@@ -28,4 +29,4 @@ export interface AuthContextType {
 
 export interface RefreshTokenResponse {
   accessToken: string;
-} 
+}
