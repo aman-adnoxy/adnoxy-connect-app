@@ -72,6 +72,15 @@ export const planService = {
     return data;
   },
 
+  async updatePlan(userId: string, planId: string, name: string, startDate: string, endDate: string): Promise<void> {
+    const { error } = await supabase
+      .from('plan')
+      .update({ name, start_date: startDate, end_date: endDate })
+      .eq('id', planId)
+      .eq('user_id', userId);
+    if (error) throw error;
+  },
+
   async updatePlanDates(userId: string, planId: string, startDate: string, endDate: string): Promise<void> {
     const { error } = await supabase
       .from('plan')
@@ -82,9 +91,27 @@ export const planService = {
   },
 
   async removeFromPlan(userId: string, planId: string, listingId: string): Promise<void> {
-    // Remove listingId from the listings array of the plan
-    const { error } = await supabase.rpc('remove_listing_from_plan', { plan_id: planId, listing_id: listingId });
-    if (error) throw error;
+    // First verify the plan belongs to the user
+    const { data: plan, error: fetchError } = await supabase
+      .from('plan')
+      .select('listings')
+      .eq('id', planId)
+      .eq('user_id', userId)
+      .single();
+
+    if (fetchError) throw fetchError;
+    if (!plan) throw new Error('Plan not found');
+
+    // Remove listingId from the listings array
+    const updatedListings = plan.listings.filter((id: string) => id !== listingId);
+    
+    const { error: updateError } = await supabase
+      .from('plan')
+      .update({ listings: updatedListings })
+      .eq('id', planId)
+      .eq('user_id', userId);
+
+    if (updateError) throw updateError;
   },
 
   async deletePlan(userId: string, planId: string): Promise<void> {
@@ -95,4 +122,4 @@ export const planService = {
       .eq('id', planId);
     if (error) throw error;
   },
-}; 
+};

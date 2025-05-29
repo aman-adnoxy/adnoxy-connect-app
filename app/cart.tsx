@@ -78,7 +78,7 @@ export default function CartScreen() {
           ]}
           onPress={() => router.push('/auth/login')}
         >
-          <Text style={styles.buttonText}>Sign In</Text>
+          <Text style={[styles.buttonText, isDark && { color: Colors.dark.background }]}>Sign In</Text>
         </Pressable>
       </SafeAreaView>
     );
@@ -108,7 +108,7 @@ export default function CartScreen() {
             ]}
             onPress={loadListings}
           >
-            <Text style={styles.buttonText}>Retry</Text>
+            <Text style={[styles.buttonText, isDark && { color: Colors.dark.background }]}>Retry</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -128,7 +128,7 @@ export default function CartScreen() {
           ]}
           onPress={() => router.push('/')}
         >
-          <Text style={styles.buttonText}>Browse Listings</Text>
+          <Text style={[styles.buttonText, isDark && { color: Colors.dark.background }]}>Browse Listings</Text>
         </Pressable>
       </SafeAreaView>
     );
@@ -162,8 +162,8 @@ export default function CartScreen() {
               ]}
               onPress={clearCart}
             >
-              <FontAwesome name="trash" size={20} color="#FF3B30" />
-              <Text style={styles.clearButtonText}>Clear</Text>
+              <FontAwesome name="trash" size={20} color={Colors[colorScheme ?? 'light'].error} />
+              <Text style={[styles.clearButtonText, isDark && { color: Colors.dark.error }]}>Clear</Text>
             </Pressable>
           ),
         }}
@@ -187,7 +187,7 @@ export default function CartScreen() {
                 style={styles.itemImage}
                 defaultSource={require('@/assets/images/placeholder.png')}
               />
-              <View style={styles.itemDetails}>
+              <View style={[styles.itemDetails]}>
                 <Text style={[Typography.h3, styles.itemTitle, isDark && styles.darkItemTitle]}>
                   {listing.title || 'Untitled Listing'}
                 </Text>
@@ -211,7 +211,7 @@ export default function CartScreen() {
                 ]}
                 onPress={() => removeFromCart(item.listing_id)}
               >
-                <FontAwesome name="times" size={20} color="#FF3B30" />
+                <FontAwesome name="times" size={20} color={Colors[colorScheme ?? 'light'].error} />
               </Pressable>
             </Pressable>
           );
@@ -219,7 +219,7 @@ export default function CartScreen() {
       </View>
 
       <View style={[styles.footer, isDark && styles.darkFooter]}>
-        <View style={styles.totalContainer}>
+        <View style={[styles.totalContainer]}>
           <Text style={[Typography.h3, styles.totalLabel, isDark && styles.darkTotalLabel]}>
             Total:
           </Text>
@@ -235,7 +235,7 @@ export default function CartScreen() {
           ]}
           onPress={handleCheckout}
         >
-          <Text style={styles.checkoutButtonText}>Proceed to Checkout</Text>
+          <Text style={[styles.checkoutButtonText, isDark && { color: Colors.dark.background }]}>Proceed to Checkout</Text>
         </Pressable>
       </View>
     </SafeAreaView>
@@ -303,6 +303,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 16,
     justifyContent: 'center',
+    backgroundColor: 'transparent', // Removed backgroundColor
   },
   itemTitle: {
     color: '#000',
@@ -354,6 +355,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
+    backgroundColor: 'transparent', // Removed backgroundColor
   },
   totalLabel: {
     color: '#000',

@@ -5,7 +5,7 @@ export const usersService = {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, email, name, created_at, phone_number, other_details, updated_at')
+        .select('id, email, name, created_at')
         .eq('id', userId)
         .single();
 
@@ -17,7 +17,7 @@ export const usersService = {
     }
   },
 
-  async updateUser(userId: string, updates: { name?: string; phone_number?: string; other_details?: string }) {
+  async updateUser(userId: string, updates: { name?: string; other_details?: string }) {
     try {
       const { data, error } = await supabase
         .from('profiles')

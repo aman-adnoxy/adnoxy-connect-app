@@ -53,7 +53,7 @@ const PlanListings: React.FC<PlanListingsProps> = ({
                   {listing.city}{listing.area ? `, ${listing.area}` : ''}
                 </Text>
                 <Text style={[styles.listingPrice, isDark && styles.darkText]}>
-                  ${listing.price} per night
+                  ₹{listing.price} / month
                 </Text>
                 {!isAvailable && (
                   <Text style={styles.unavailableText}>

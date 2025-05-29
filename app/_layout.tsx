@@ -110,6 +110,7 @@ export default function Layout() {
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
+  
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>

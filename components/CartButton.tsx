@@ -6,7 +6,7 @@ import Colors from '@/constants/Colors';
 import { useCart } from '@/hooks/useCart';
 import { router } from 'expo-router';
 
-function Badge({ count, color }: { count: number; color: string }) {
+function Badge({ count, isDark }: { count: number; isDark: boolean }) {
   if (count === 0) return null;
   return (
     <View
@@ -14,7 +14,7 @@ function Badge({ count, color }: { count: number; color: string }) {
         position: 'absolute',
         top: -4,
         right: -4,
-        backgroundColor: color,
+        backgroundColor: isDark ? Colors.dark.text : Colors.light.tint, // Dark mode background
         borderRadius: 10,
         minWidth: 20,
         height: 20,
@@ -23,7 +23,7 @@ function Badge({ count, color }: { count: number; color: string }) {
         paddingHorizontal: 4,
       }}
     >
-      <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>
+      <Text style={{ color: isDark ? Colors.dark.background : '#fff', fontSize: 12, fontWeight: 'bold' }}>
         {count > 99 ? '99+' : count}
       </Text>
     </View>
@@ -33,7 +33,6 @@ function Badge({ count, color }: { count: number; color: string }) {
 export function CartButton() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
-  const tintColor = Colors[colorScheme ?? 'light'].tint;
   const { items } = useCart();
 
   return (
@@ -43,8 +42,8 @@ export function CartButton() {
     >
       <View>
         <Ionicons name="cart-outline" size={28} color={isDark ? '#fff' : '#000'} />
-        <Badge count={items.length} color={tintColor} />
+        <Badge count={items.length} isDark={isDark} />
       </View>
     </TouchableOpacity>
   );
-} 
+}

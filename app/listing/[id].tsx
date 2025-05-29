@@ -11,7 +11,10 @@ import Colors from '@/constants/Colors';
 import { Typography } from '@/constants/Typography';
 import { usePlan } from '@/hooks/usePlan';
 import { useAuth } from '@/contexts/AuthContext';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
+import FontAwesome from '@expo/vector-icons/FontAwesome'; // Keep this for other FontAwesome usage
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'; // New import
+import { faCartPlus } from '@fortawesome/free-solid-svg-icons'; // New import
+import { faCircleCheck } from '@fortawesome/free-solid-svg-icons'; // New import
 import { usersService } from '@/services/users';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useCart } from '@/hooks/useCart';
@@ -252,6 +255,35 @@ const styles = StyleSheet.create({
   darkShowMapButtonText: {
     color: '#000',
   },
+  mapActionsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around', // Distribute space evenly
+    marginTop: 12,
+    marginBottom: 12,
+  },
+  mapActionButton: {
+    backgroundColor: '#000',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1, // Take equal space
+    marginHorizontal: 5, // Add some margin between buttons
+  },
+  darkMapActionButton: {
+    backgroundColor: '#fff',
+  },
+  mapActionButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
+    marginLeft: 8,
+  },
+  darkMapActionButtonText: {
+    color: '#000',
+  },
 
   // Availability
   availabilityContainer: {
@@ -318,6 +350,12 @@ const styles = StyleSheet.create({
   darkDates: {
     color: '#ccc',
   },
+  headerDates: {
+    marginTop: 8, // Add some margin from the price
+    fontSize: 16, // Slightly larger font size for prominence
+    fontWeight: '600', // Make it a bit bolder
+    color: '#333', // A slightly darker color for better contrast
+  },
   footerButtons: {
     flexDirection: 'row',
     gap: 10, // Increased gap between buttons
@@ -342,7 +380,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   darkCartButton: {
-    backgroundColor: '#333',
+    backgroundColor: '#fff',
   },
   disabledCartButton: {
     backgroundColor: '#ccc', // Lighter background for disabled
@@ -602,6 +640,11 @@ export default function ListingDetailsScreen({ id: propId }: { id?: string }) {
             <Text style={[Typography.price, styles.price, isDark && styles.darkPrice]}>
               ₹{listing.price} / month
             </Text>
+            {listing.availability_start && listing.availability_end && (
+              <Text style={[Typography.caption, styles.dates, styles.headerDates, isDark && styles.darkDates]}>
+                {new Date(listing.availability_start).toLocaleDateString()} - {new Date(listing.availability_end).toLocaleDateString()}
+              </Text>
+            )}
           </View>
 
           <View style={styles.infoSection}>
@@ -657,19 +700,25 @@ export default function ListingDetailsScreen({ id: propId }: { id?: string }) {
                 </Text>
               </View>
             )}
-            <View style={styles.infoRow}>
-              <FontAwesome name="location-arrow" size={20} color={isDark ? '#fff' : '#000'} />
-              <View style={{ flex: 1 }}>                
-                <TouchableOpacity 
-                  style={[styles.showMapButton, isDark && styles.darkShowMapButton, { marginHorizontal: 0, marginBottom: 0 }]} 
-                  onPress={handleLocationPress}
-                >
-                  <Ionicons name="map-outline" size={16} color={isDark ? '#000' : '#fff'} />
-                  <Text style={[styles.showMapButtonText, isDark && styles.darkShowMapButtonText]}>
-                    Open in Maps
-                  </Text>
-                </TouchableOpacity>
-              </View>
+            <View style={[styles.infoRow, styles.mapActionsContainer]}>
+              <TouchableOpacity 
+                style={[styles.mapActionButton, isDark && styles.darkMapActionButton]} 
+                onPress={handleLocationPress}
+              >
+                <Ionicons name="map-outline" size={16} color={isDark ? '#000' : '#fff'} />
+                <Text style={[styles.mapActionButtonText, isDark && styles.darkMapActionButtonText]}>
+                  Open in Maps
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.mapActionButton, isDark && styles.darkMapActionButton]}
+                onPress={handleStreetViewPress}
+              >
+                <FontAwesome name="street-view" size={16} color={isDark ? '#000' : '#fff'} />
+                <Text style={[styles.mapActionButtonText, isDark && styles.darkMapActionButtonText]}>
+                  View in Street View
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -711,30 +760,8 @@ export default function ListingDetailsScreen({ id: propId }: { id?: string }) {
                 </TouchableOpacity>
               )}
             </View>
-            <TouchableOpacity
-              style={[styles.showMapButton, isDark && styles.darkShowMapButton]}
-              onPress={handleStreetViewPress} // Change to handleStreetViewPress
-            >
-              <Text style={[styles.showMapButtonText, isDark && styles.darkShowMapButtonText]}>
-                View on Street view {/* Change text */}
-              </Text>
-            </TouchableOpacity>
           </View>
 
-          <View style={styles.divider} />
-
-          <View style={styles.infoSection}>
-            <Text style={[Typography.h3, styles.sectionTitle, isDark && styles.darkText]}>
-              Availability
-            </Text>
-            <View style={styles.availabilityContainer}>
-              {listing.availability_start && listing.availability_end && (
-                <Text style={[Typography.caption, styles.dates, isDark && styles.darkDates]}>
-                  {new Date(listing.availability_start).toLocaleDateString()} - {new Date(listing.availability_end).toLocaleDateString()}
-                </Text>
-              )}
-            </View>
-          </View>
 
           {listing.supporting_documents && listing.supporting_documents.length > 0 && (
             <>
@@ -783,11 +810,9 @@ export default function ListingDetailsScreen({ id: propId }: { id?: string }) {
             onPress={handleAddToCart}
             disabled={isInCart}
           >
-            <Ionicons 
-              name={isInCart ? "checkmark-circle-outline" : "add-circle-outline"} 
+            <FontAwesomeIcon 
+              icon={isInCart ? faCircleCheck : faCartPlus} 
               size={20} 
-              color={isInCart ? "#666" : "#fff"} 
-              style={styles.buttonIcon} 
             />
           </TouchableOpacity>
           <TouchableOpacity

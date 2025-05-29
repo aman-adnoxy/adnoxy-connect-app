@@ -329,7 +329,7 @@ export default function AddListingScreen() {
               }}
               disabled={!disclaimerConfirmed}
             >
-              <Text style={styles.buttonText}>Proceed</Text>
+              <Text style={[styles.buttonText, disclaimerConfirmed && { color: '#000' }]}>Proceed</Text>
             </TouchableOpacity>
           </View>
         </View>

@@ -19,16 +19,14 @@ export default function ProfileScreen() {
   const { plans } = usePlan();
 
   const [name, setName] = useState(user?.name || '');
-  const [phoneNumber, setPhoneNumber] = useState(user?.phone_number || '');
-  const [otherDetails, setOtherDetails] = useState(user?.other_details || '');
+  // const [otherDetails, setOtherDetails] = useState(user?.other_details || '');
 
   const handleUpdateAccountDetails = async () => {
     if (!user) return;
     try {
       await usersService.updateUser(user.id, {
         name,
-        phone_number: phoneNumber,
-        other_details: otherDetails,
+        // other_details: otherDetails,
       });
       await refreshUser(); // Refresh user context after update
       Alert.alert('Success', 'Account details updated successfully!');
@@ -130,7 +128,7 @@ export default function ProfileScreen() {
             value={name}
             onChangeText={setName}
           />
-          <TextInput
+          {/* <TextInput
             style={[styles.input, isDark && styles.darkInput]}
             placeholder="Phone Number"
             placeholderTextColor={isDark ? Colors.dark.textSecondary : Colors.light.textSecondary}
@@ -145,7 +143,7 @@ export default function ProfileScreen() {
             value={otherDetails}
             onChangeText={setOtherDetails}
             multiline
-          />
+          /> */}
           <Pressable
             style={({ pressed }) => [
               styles.saveButton,

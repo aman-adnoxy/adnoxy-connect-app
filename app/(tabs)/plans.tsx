@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { StyleSheet, FlatList, TouchableOpacity, SafeAreaView, View, TextInput, Modal, Image, Dimensions } from 'react-native';
+import { StyleSheet, FlatList, TouchableOpacity, SafeAreaView, View, TextInput, Modal, Image, Dimensions, Alert, Pressable } from 'react-native';
 import { Text } from '@/components/Themed';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
@@ -7,6 +7,7 @@ import { usePlan } from '@/hooks/usePlan';
 import { useAuth } from '@/contexts/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { useNavigation } from '@react-navigation/native'; // Import useNavigation
 import { Listing } from '@/types/listing';
 import { Plan } from '@/types/plan';
 import { listingsService } from '@/services/listings';
@@ -19,11 +20,13 @@ export default function PlansScreen() {
   const isDark = colorScheme === 'dark';
   const tintColor = Colors[colorScheme ?? 'light'].tint;
   const { user } = useAuth();
-  const { plans, createPlan } = usePlan();
+  const { plans, createPlan, deletePlan, refreshPlans } = usePlan(); // Destructure refreshPlans
+  const navigation = useNavigation(); // Initialize useNavigation
   const [showModal, setShowModal] = useState(false);
   const [planName, setPlanName] = useState('');
   const [loading, setLoading] = useState(false);
   const [listingDetails, setListingDetails] = useState<Record<string, Listing>>({});
+  const [editMode, setEditMode] = useState(false); // New state for edit mode
 
   useEffect(() => {
     const fetchListingDetails = async () => {
@@ -49,6 +52,17 @@ export default function PlansScreen() {
     }
   }, [plans]);
 
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      // When the screen comes into focus, reload the plans
+      if (user) {
+        refreshPlans(); // Call refreshPlans
+      }
+    });
+
+    return unsubscribe;
+  }, [navigation, user, refreshPlans]); // Add refreshPlans to dependency array
+
   const handleCreatePlan = async () => {
     if (!planName.trim()) return;
     setLoading(true);
@@ -61,6 +75,32 @@ export default function PlansScreen() {
     }
   };
 
+  const handleDeletePlan = async (planId: string, planName: string) => {
+    Alert.alert(
+      'Delete this plan?',
+      `${planName} will be permanently deleted.`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          onPress: async () => {
+            try {
+              await deletePlan(planId); // Uncommented the actual delete call
+              console.log(`Deleting plan with ID: ${planId}`); // Keep for confirmation
+            } catch (error) {
+              console.error('Error deleting plan:', error);
+            }
+          },
+          style: 'destructive',
+        },
+      ],
+      { cancelable: true }
+    );
+  };
+
   const renderPlanCard = ({ item }: { item: Plan }) => {
     const planListings = item.listings
       .map(id => listingDetails[id])
@@ -68,40 +108,45 @@ export default function PlansScreen() {
       .slice(0, 4);
 
     const imageUrls = planListings.map(listing => listing.image_urls[0]);
-    const remainingCount = Math.max(0, item.listings.length - 4);
+    const coverImageUrl = imageUrls[0];
 
     return (
-      <TouchableOpacity
+      <Pressable
         style={[styles.planCard, isDark && styles.darkPlanCard]}
         onPress={() => router.push({ pathname: '/plan/[id]', params: { id: item.id } })}
       >
-        <View style={styles.imageGrid}>
-          {imageUrls.map((url: string, index: number) => (
+        <View style={styles.imageContainer}>
+          {coverImageUrl ? (
             <Image
-              key={index}
-              source={{ uri: url }}
-              style={[
-                styles.gridImage,
-                index === 0 && styles.mainImage,
-                index > 0 && styles.smallImage
-              ]}
+              source={{ uri: coverImageUrl }}
+              style={styles.coverImage}
             />
-          ))}
-          {remainingCount > 0 && (
-            <View style={styles.remainingOverlay}>
-              <Text style={styles.remainingText}>+{remainingCount}</Text>
+          ) : (
+            <View style={styles.placeholderImage}>
+              <Ionicons name="image-outline" size={48} color={isDark ? '#666' : '#999'} />
             </View>
           )}
+          {editMode && (
+            <TouchableOpacity 
+              style={styles.deleteIconContainer} 
+              onPress={() => handleDeletePlan(item.id, item.name)}
+            >
+              <Ionicons name="close-circle" size={24} color="white" />
+            </TouchableOpacity>
+          )}
         </View>
-        <View style={[styles.planInfo, isDark && styles.darkPlanInfo]}>
+        <View style={[styles.planInfo]}>
           <Text style={[styles.planName, isDark && styles.darkText]} numberOfLines={1}>
             {item.name}
           </Text>
           <Text style={[styles.planMeta, isDark && styles.darkText]}>
             {item.listings.length} {item.listings.length === 1 ? 'listing' : 'listings'}
           </Text>
+          <Text style={[styles.planDate, isDark && styles.darkDate]}>
+             {item.start_date.toLocaleString()} - {item.end_date.toLocaleString()}
+          </Text>
         </View>
-      </TouchableOpacity>
+      </Pressable>
     );
   };
 
@@ -109,12 +154,8 @@ export default function PlansScreen() {
     <SafeAreaView style={[styles.container, isDark && styles.darkContainer]}>
       <View style={styles.header}>
         <Text style={[styles.title, isDark && styles.darkText]}>My Plans</Text>
-        <TouchableOpacity 
-          style={[styles.addButton, { backgroundColor: '#FF5A5F' }]} 
-          onPress={() => setShowModal(true)}
-        >
-          <Ionicons name="add" size={20} color="#fff" />
-          <Text style={styles.addButtonText}>New Plan</Text>
+        <TouchableOpacity onPress={() => setEditMode(!editMode)}>
+          <Text style={[styles.editText, isDark && styles.darkText]}>{editMode ? 'Done' : 'Edit'}</Text>
         </TouchableOpacity>
       </View>
 
@@ -179,30 +220,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 32,
+    paddingTop: 80, // Increased padding for more space at the top
     paddingBottom: 16,
     backgroundColor: 'transparent',
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 32, // Larger font size
+    fontWeight: '800', // Bolder font weight
     color: '#000',
     backgroundColor: 'transparent',
   },
   darkText: {
     color: '#fff',
   },
-  addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  addButtonText: {
-    color: '#fff',
+  // Removed addButton and addButtonText styles as they are not part of the Airbnb header design.
+  editText: {
+    fontSize: 16,
     fontWeight: '600',
-    marginLeft: 8,
+    color: '#000', // Adjust color as per Airbnb design
   },
   row: {
     justifyContent: 'space-between',
@@ -221,51 +256,38 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   darkPlanCard: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: 'transparent',
   },
-  imageGrid: {
+  imageContainer: {
     width: '100%',
-    height: COLUMN_WIDTH,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    backgroundColor: '#f0f0f0',
+    height: COLUMN_WIDTH, // Approximately 4:3 aspect ratio
     borderRadius: 12,
     overflow: 'hidden',
+    backgroundColor: '#f0f0f0', // Placeholder background
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  gridImage: {
-    backgroundColor: '#f0f0f0',
-  },
-  mainImage: {
+  coverImage: {
     width: '100%',
     height: '100%',
+    borderRadius: 12,
   },
-  smallImage: {
-    width: '50%',
-    height: '50%',
-    borderLeftWidth: 1,
-    borderTopWidth: 1,
-    borderColor: '#fff',
+  placeholderImage: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#e0e0e0', // Lighter placeholder background
+    borderRadius: 12,
   },
-  remainingOverlay: {
+  deleteIconContainer: {
     position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    padding: 8,
-    borderBottomRightRadius: 12,
-  },
-  remainingText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 16,
+    top: 8,
+    left: 8,
+    zIndex: 1, // Ensure it's above the image
   },
   planInfo: {
-    padding: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-  },
-  darkPlanInfo: {
-    borderTopColor: '#333',
+    padding: 8, 
   },
   planName: {
     fontSize: 16,
@@ -276,6 +298,14 @@ const styles = StyleSheet.create({
   planMeta: {
     fontSize: 14,
     color: '#666',
+  },
+  planDate: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 4,
+  },
+  darkDate: {
+    color: '#ccc',
   },
   listContent: {
     paddingTop: 8,
@@ -351,4 +381,4 @@ const styles = StyleSheet.create({
     color: '#666',
     fontSize: 16,
   },
-}); 
+});

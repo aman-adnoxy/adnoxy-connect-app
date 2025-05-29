@@ -46,7 +46,7 @@ function FilterChips({ onFilter, isDark, selectedCategory }: { onFilter: (catego
               style={[
                 styles.filterChipText, 
                 isDark && styles.darkFilterChipText,
-                isSelected && { color: '#fff' }
+                isSelected && { color: '#000', fontWeight: 'bold' }
               ]}
             >
               {category}

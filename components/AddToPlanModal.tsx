@@ -26,9 +26,61 @@ export default function AddToPlanModal({ visible, onClose, listing, onPlanAdded 
   const [loading, setLoading] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
 
+  const isListingAvailable = (listing: Listing, planStartDateStr: string, planEndDateStr: string): boolean => {
+    if (listing.is_unavailable) {
+      return false;
+    }
+
+    const planStartDate = new Date(planStartDateStr);
+    const planEndDate = new Date(planEndDateStr);
+
+    const listingAvailabilityStart = listing.availability_start ? new Date(listing.availability_start) : null;
+    const listingAvailabilityEnd = listing.availability_end ? new Date(listing.availability_end) : null;
+
+    // If listing has no availability dates, assume it's always available
+    if (!listingAvailabilityStart && !listingAvailabilityEnd) {
+      return true;
+    }
+
+    // If listing has no availability dates, it's always available
+    if (!listingAvailabilityStart && !listingAvailabilityEnd) {
+      return true;
+    }
+
+    // If listing has only a start date, it's available from start date onwards
+    if (listingAvailabilityStart && !listingAvailabilityEnd) {
+      return planStartDate >= listingAvailabilityStart;
+    }
+
+    // If listing has only an end date, it's available until end date
+    if (!listingAvailabilityStart && listingAvailabilityEnd) {
+      return planEndDate <= listingAvailabilityEnd;
+    }
+
+    // If listing has both start and end dates, check if plan dates are a subset
+    // Plan start date must be on or after listing availability start date
+    // AND Plan end date must be on or before listing availability end date
+    const isSubset =
+      (planStartDate >= listingAvailabilityStart!) &&
+      (planEndDate <= listingAvailabilityEnd!);
+
+    return isSubset;
+  };
+
   const handleAddToExisting = async (planId: string) => {
     setLoading(true);
     try {
+      const targetPlan = plans.find(p => p.id === planId);
+      if (!targetPlan) {
+        Alert.alert('Error', 'Plan not found.');
+        return;
+      }
+
+      if (!isListingAvailable(listing, targetPlan.start_date, targetPlan.end_date)) {
+        Alert.alert('Availability Conflict', 'This listing is not available for the selected plan dates.');
+        return;
+      }
+
       await addToPlan(planId, listing);
       const updatedPlan = plans.find(p => p.id === planId);
       if (updatedPlan && onPlanAdded) {
@@ -51,6 +103,11 @@ export default function AddToPlanModal({ visible, onClose, listing, onPlanAdded 
     }
     setLoading(true);
     try {
+      if (!isListingAvailable(listing, startDate, endDate)) {
+        Alert.alert('Availability Conflict', 'This listing is not available for the specified plan dates.');
+        return;
+      }
+
       // Pass startDate and endDate to createPlan
       const newPlan = await createPlan(newPlanName.trim(), listing, startDate, endDate);
       if (onPlanAdded) {

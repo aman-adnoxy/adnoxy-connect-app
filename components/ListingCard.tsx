@@ -104,7 +104,7 @@ function ImageCarousel({ images, isDark }: { images: string[], isDark: boolean }
 }
 
 export function ListingCard({ item, tintColor, onWishlistToggle, onPress, showVerificationStatus }: ListingCardProps) {
-  const colorScheme = useColorScheme();
+  const colorScheme = useColorScheme() ?? 'light';
   const isDark = colorScheme === 'dark';
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showAddToPlan, setShowAddToPlan] = useState(false);
@@ -141,13 +141,15 @@ export function ListingCard({ item, tintColor, onWishlistToggle, onPress, showVe
           onScroll={handleScroll}
           scrollEventThrottle={16}
           decelerationRate="fast"
+          contentContainerStyle={[styles.carouselScrollViewContent, { width: CARD_WIDTH * item.image_urls.length }]}
         >
           {item.image_urls.map((url, index) => (
-            <Image
-              key={index}
-              source={{ uri: url }}
-              style={styles.image}
-            />
+            <RNView key={index} style={styles.carouselItem}>
+              <Image
+                source={{ uri: url }}
+                style={styles.image}
+              />
+            </RNView>
           ))}
         </ScrollView>
         {item.image_urls.length > 1 && (
@@ -195,9 +197,13 @@ export function ListingCard({ item, tintColor, onWishlistToggle, onPress, showVe
       {showVerificationStatus && (
         <View style={[
           styles.verificationBadge,
-          item.verification_status === 'pending' && styles.badgePending,
-          item.verification_status === 'approved' && styles.badgeApproved,
-          item.verification_status === 'rejected' && styles.badgeRejected,
+          { 
+            backgroundColor: 
+              item.verification_status === 'pending' ? Colors[colorScheme].warning :
+              item.verification_status === 'approved' ? Colors[colorScheme].success :
+              item.verification_status === 'rejected' ? Colors[colorScheme].error :
+              'rgba(0,0,0,0.6)' // Fallback or default dark background
+          }
         ]}>
           <Ionicons 
             name={
@@ -219,10 +225,10 @@ export function ListingCard({ item, tintColor, onWishlistToggle, onPress, showVe
         style={({ pressed }) => [
           styles.wishlistButton,
           { opacity: pressed ? 0.7 : 1 },
-          { backgroundColor: tintColor }
+          { backgroundColor: 'black' }
         ]}
       >
-        <Ionicons name="add-circle-outline" size={24} color="#fff" style={styles.wishlistIcon} />
+        <Ionicons name="add-circle-outline" size={24} color={isDark ? Colors.dark.text : Colors.light.text} style={styles.wishlistIcon} />
       </Pressable>
       <AddToPlanModal
         visible={showAddToPlan}
@@ -367,6 +373,9 @@ const styles = StyleSheet.create({
     width: CARD_WIDTH,
     height: IMAGE_HEIGHT,
   },
+  carouselScrollViewContent: {
+    flexDirection: 'row', // Ensure images are laid out horizontally
+  },
   carouselItem: {
     width: CARD_WIDTH,
     height: IMAGE_HEIGHT,
@@ -439,14 +448,5 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 12,
     fontWeight: 'bold',
-  },
-  badgePending: {
-    backgroundColor: Colors.light.warning,
-  },
-  badgeApproved: {
-    backgroundColor: Colors.light.success,
-  },
-  badgeRejected: {
-    backgroundColor: Colors.light.error,
   },
 });

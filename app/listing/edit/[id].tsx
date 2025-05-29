@@ -302,9 +302,9 @@ export default function EditListingScreen() {
         {/* Photo tour card */}
         <Pressable onPress={() => openEditModal('photoTour', { image_urls: formData.image_urls })} style={[styles.card, isDark && styles.darkCard]}>
           <Text style={[styles.cardTitle, isDark && styles.darkCardTitle]}>Photo tour</Text>
-          <Text style={[styles.cardSubtitle, isDark && styles.darkCardSubtitle]}>
+          {/* <Text style={[styles.cardSubtitle, isDark && styles.darkCardSubtitle]}>
             Add photos to your listing
-          </Text>
+          </Text> */}
           <View style={styles.photoTourPlaceholder}>
             {listing?.image_urls && listing.image_urls.length > 0 ? (
               <Image source={{ uri: listing.image_urls[0] }} style={styles.photoTourImage} />
@@ -408,7 +408,7 @@ export default function EditListingScreen() {
               <Text style={[styles.placeholderText, isDark && styles.darkText]}>No location set</Text>
             </View>
           )}
-          <View style={{ marginTop: 20 }}>
+          <View style={{ marginTop: 20, backgroundColor: 'transparent' }}>
           <Text style={[styles.cardContentText, isDark && styles.darkCardContentText]}>
             {formData.google_location || formData.address || <Text style={styles.placeholderText}>Not set</Text>}
           </Text>
@@ -452,7 +452,7 @@ export default function EditListingScreen() {
             </Pressable>
             <ScrollView>
               {selectedCardData?.cardType === 'photoTour' && (
-                <View>
+                <View style={{ backgroundColor: 'transparent' }}>
                   <Text style={[styles.modalTitle, isDark && styles.darkText]}>Edit Photos</Text>
                   {/* Add photo editing components here */}
                   <ImagePickerComponent
@@ -905,7 +905,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.dark.border,
   },
   cardTitle: {
-    fontSize: 22, // Slightly larger title
+    fontSize: 16, // Slightly larger title
     fontWeight: '700', // Bolder title
     marginBottom: 12, // Increased margin bottom
     color: Colors.light.text,
@@ -916,6 +916,7 @@ const styles = StyleSheet.create({
   cardSubtitle: {
     fontSize: 15, // Slightly larger subtitle
     color: Colors.light.textSecondary,
+    fontWeight: '400',
     marginBottom: 8, // Increased margin bottom
   },
   darkCardSubtitle: {

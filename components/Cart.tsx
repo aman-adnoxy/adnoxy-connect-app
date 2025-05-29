@@ -72,7 +72,7 @@ export function Cart() {
                 source={listingImages[listing.image_urls[0] as keyof typeof listingImages]}
                 style={styles.itemImage}
               />
-              <View style={styles.itemDetails}>
+              <View style={[styles.itemDetails, isDark && { backgroundColor: Colors.dark.cardBackground }]}>
                 <Text style={[styles.itemTitle, isDark && styles.darkItemTitle]}>
                   {listing.title}
                 </Text>
@@ -114,10 +114,10 @@ export function Cart() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.light.background,
   },
   darkContainer: {
-    backgroundColor: '#000',
+    backgroundColor: Colors.dark.background,
   },
   centerContent: {
     justifyContent: 'center',
@@ -130,12 +130,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    backgroundColor: '#fff',
+    borderBottomColor: Colors.light.border,
+    backgroundColor: Colors.light.cardBackground,
   },
   darkCartItem: {
-    backgroundColor: '#000',
-    borderBottomColor: '#333',
+    backgroundColor: Colors.dark.cardBackground,
+    borderBottomColor: Colors.dark.border,
   },
   itemImage: {
     width: 80,
@@ -146,15 +146,16 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 16,
     justifyContent: 'center',
+    // Removed backgroundColor: 'transparent'
   },
   itemTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
+    color: Colors.light.text,
     marginBottom: 4,
   },
   darkItemTitle: {
-    color: '#fff',
+    color: Colors.dark.text,
   },
   itemPrice: {
     fontSize: 14,
@@ -163,10 +164,10 @@ const styles = StyleSheet.create({
   },
   itemLocation: {
     fontSize: 12,
-    color: '#666',
+    color: Colors.light.textSecondary,
   },
   darkItemLocation: {
-    color: '#999',
+    color: Colors.dark.textSecondary,
   },
   removeButton: {
     padding: 8,
@@ -178,21 +179,22 @@ const styles = StyleSheet.create({
   footer: {
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: '#eee',
-    backgroundColor: '#fff',
+    borderTopColor: Colors.light.border,
+    backgroundColor: Colors.light.background,
   },
   darkFooter: {
-    backgroundColor: '#000',
-    borderTopColor: '#333',
+    backgroundColor: Colors.dark.background,
+    borderTopColor: Colors.dark.border,
   },
   totalText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#000',
+    // Removed backgroundColor: 'transparent'
+    color: Colors.light.text,
     marginBottom: 16,
   },
   darkTotalText: {
-    color: '#fff',
+    color: Colors.dark.text,
   },
   checkoutButton: {
     padding: 16,
@@ -206,11 +208,11 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#666',
+    color: Colors.light.textSecondary,
     textAlign: 'center',
     marginTop: 32,
   },
   darkEmptyText: {
-    color: '#999',
+    color: Colors.dark.textSecondary,
   },
-}); 
+});
