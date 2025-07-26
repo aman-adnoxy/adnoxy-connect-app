@@ -8,7 +8,7 @@ module.exports = {
     scheme: 'myapp',
     userInterfaceStyle: 'automatic',
     splash: {
-      image: './assets/images/splash-icon.png',
+      image: './assets/images/adnoxy-logo.jpg',
       resizeMode: 'contain',
       backgroundColor: '#ffffff'
     },
