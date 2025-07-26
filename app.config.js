@@ -4,7 +4,7 @@ module.exports = {
     slug: 'adnoxy-connect',
     version: '1.0.0',
     orientation: 'portrait',
-    icon: './assets/images/icon.png',
+    icon: './assets/images/adnoxy-logo-transparent.png',
     scheme: 'myapp',
     userInterfaceStyle: 'automatic',
     splash: {
@@ -21,7 +21,7 @@ module.exports = {
     android: {
       package: 'com.adnoxy.connect',
       adaptiveIcon: {
-        foregroundImage: './assets/images/adaptive-icon.png',
+        foregroundImage: './assets/images/adnoxy-logo-transparent.png',
         backgroundColor: '#ffffff'
       }
     },
