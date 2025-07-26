@@ -185,7 +185,7 @@ export default function CartScreen() {
               <Image
                 source={{ uri: listing.image_urls?.[0] || '' }}
                 style={styles.itemImage}
-                defaultSource={require('@/assets/images/placeholder.png')}
+
               />
               <View style={[styles.itemDetails]}>
                 <Text style={[Typography.h3, styles.itemTitle, isDark && styles.darkItemTitle]}>
